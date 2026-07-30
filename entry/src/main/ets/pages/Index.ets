@@ -75,14 +75,13 @@ struct Index {
         }
         .tabBar(this.tabItemBuilder(3))
       }
-      .width('100%')
-      .height('100%')
-      .barHeight(52)
+      .barHeight('auto')
       .barBackgroundColor(AppColors.CARD_BG)
       .onChange((idx: number) => {
         this.currentTab = idx;
       })
     }
+    .hideTitleBar(true)
     .navDestination(this.pageMap)
     .mode(NavigationMode.Stack)
   }
@@ -97,8 +96,5 @@ struct Index {
         .fontSize(10)
         .fontColor(this.currentTab === index ? AppColors.BRAND : AppColors.TEXT_SECONDARY)
     }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
   }
 }
