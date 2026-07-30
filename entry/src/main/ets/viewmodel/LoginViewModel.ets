@@ -1,5 +1,5 @@
 import { AuthRepository } from '../data/repository/AuthRepository';
-import { AccountProfile, QrPollStatus } from '../models/LoginModels';
+import { AccountProfile, AuthCredential, QrPollStatus } from '../models/LoginModels';
 import { Logger } from '../common/utils/Logger';
 
 /** 二维码有效期（秒） */
@@ -109,7 +109,11 @@ export class LoginViewModel {
         case QrPollStatus.Success:
           this.statusText = '登录成功，正在获取用户信息…';
           this.stopPolling();
-          await this.finishLogin();
+          if (result.credential !== undefined) {
+            await this.finishLogin(result.credential);
+          } else {
+            this.statusText = '凭证获取失败：未找到凭证信息';
+          }
           break;
       }
     } catch (e) {
@@ -117,13 +121,8 @@ export class LoginViewModel {
     }
   }
 
-  private async finishLogin(): Promise<void> {
-    const r = await this.repo.fetchCredential(this.authCode);
-    if (!r.isOk) {
-      this.statusText = `凭证获取失败：${r.error.message}`;
-      return;
-    }
-    const r2 = await this.repo.completeLogin(r.value);
+  private async finishLogin(credential: AuthCredential): Promise<void> {
+    const r2 = await this.repo.completeLogin(credential);
     if (r2.isOk) {
       this.isSuccess = true;
       this.statusText = `欢迎，${r2.value.uname}`;

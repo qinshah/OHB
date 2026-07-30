@@ -3,6 +3,7 @@ import { AppError } from '../../common/result/AppError';
 import { BiliApi } from '../../network/BiliApi';
 import { AccountProfile, AuthCredential, QrCodeSession, QrPollResult, QrPollStatus } from '../../models/LoginModels';
 import { AccountManager } from '../../services/account/AccountManager';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 interface RawAuthCodeData {
   url?: string;
@@ -76,6 +77,24 @@ export class AuthRepository {
     const r = await this.api.tvQrCodePoll(authCode);
     const result = new QrPollResult();
     if (r.isOk) {
+      // 成功时直接解析凭证，避免二次请求
+      const data = r.value as RawPollData;
+      const token = data.token_info;
+      if (token !== undefined && token.access_token !== undefined && token.refresh_token !== undefined) {
+        const credential = new AuthCredential();
+        credential.accessToken = token.access_token;
+        credential.refreshToken = token.refresh_token;
+        credential.mid = `${token.mid ?? 0}`;
+        credential.expiresAt = Math.floor(Date.now() / 1000) + (token.expires_in ?? 0);
+        const cookies = data.cookie_info?.cookies ?? [];
+        for (let i = 0; i < cookies.length; i++) {
+          const c = cookies[i];
+          if (c.name !== undefined && c.value !== undefined) {
+            credential.cookies.set(c.name, c.value);
+          }
+        }
+        result.credential = credential;
+      }
       result.status = QrPollStatus.Success;
       result.message = '登录成功';
       return Result.ok<QrPollResult>(result);

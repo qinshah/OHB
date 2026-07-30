@@ -26,6 +26,8 @@ export enum QrPollStatus {
 export class QrPollResult {
   status: QrPollStatus = QrPollStatus.Waiting;
   message: string = '';
+  /** 登录成功时的凭证（仅当 status === Success 时有效） */
+  credential?: AuthCredential;
 }
 
 /** 登录成功后的凭证包 */
