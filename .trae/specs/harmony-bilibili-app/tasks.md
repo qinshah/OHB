@@ -7,7 +7,7 @@
 
 # P0: V1 达标任务（最高优先级，必须完成）
 
-## [ ] Task 1: 项目基础架构与分层骨架
+## [x] Task 1: 项目基础架构与分层骨架
 - **优先级**: high
 - **依赖**: 无
 - **描述**:
@@ -24,7 +24,7 @@
   - `programmatic` TR-1.3: Navigation 路由可跳转
   - `human-judgement` TR-1.4: 目录分层清晰、符合 AP-1
 
-## [ ] Task 2: 网络层 + Result/DataState 状态模型
+## [x] Task 2: 网络层 + Result/DataState 状态模型
 - **优先级**: high
 - **依赖**: Task 1
 - **描述**:
@@ -42,7 +42,7 @@
   - `programmatic` TR-2.3: Cookie 存取正常
   - `programmatic` TR-2.4: `DataState` 状态流转正确、`AppError` 错误传递正确
 
-## [ ] Task 3: 数据模型层（V1 必需子集）
+## [x] Task 3: 数据模型层（V1 必需子集）
 - **优先级**: high
 - **依赖**: Task 2
 - **描述**:
@@ -53,7 +53,7 @@
 - **测试需求**:
   - `programmatic` TR-3.1: V1 模型 JSON 反序列化/序列化正确
 
-## [ ] Task 4: 多用户与认证框架（扫码登录优先）
+## [x] Task 4: 多用户与认证框架（扫码登录优先）
 - **优先级**: high
 - **依赖**: Task 2, Task 3
 - **描述**:
@@ -73,7 +73,7 @@
   - `programmatic` TR-4.4: 多账户切换数据空间正确隔离
   - `human-judgement` TR-4.5: 登录页 UI 美观
 
-## [ ] Task 5: 视频播放器内核抽象与 AVPlayer 实现
+## [x] Task 5: 视频播放器内核抽象与 AVPlayer 实现
 - **优先级**: high
 - **依赖**: Task 2, Task 3
 - **描述**:
@@ -92,7 +92,7 @@
   - `programmatic` TR-5.5: `IPlayerEngine` 接口抽象完整，可替换实现
   - `human-judgement` TR-5.6: 控制层 UI 可用
 
-## [ ] Task 6: 首页推荐流
+## [x] Task 6: 首页推荐流
 - **优先级**: high
 - **依赖**: Task 2, Task 3, Task 4
 - **描述**:
@@ -109,7 +109,7 @@
   - `programmatic` TR-6.3: 黑名单过滤生效
   - `human-judgement` TR-6.4: 卡片 UI 美观、响应式适配
 
-## [ ] Task 7: 搜索功能
+## [x] Task 7: 搜索功能
 - **优先级**: high
 - **依赖**: Task 2, Task 3
 - **描述**:
@@ -125,7 +125,7 @@
   - `programmatic` TR-7.3: 历史存取正常
   - `human-judgement` TR-7.4: 搜索交互流畅
 
-## [ ] Task 8: 动态流加载（V1：仅加载与跳转）
+## [x] Task 8: 动态流加载（V1：仅加载与跳转）
 - **优先级**: high
 - **依赖**: Task 2, Task 3, Task 4
 - **描述**:
@@ -140,7 +140,7 @@
   - `programmatic` TR-8.2: 视频项跳转正常
   - `human-judgement` TR-8.3: 动态卡片 UI 合理
 
-## [ ] Task 9: 视频详情页（V1：播放+基础信息）
+## [x] Task 9: 视频详情页（V1：播放+基础信息）
 - **优先级**: high
 - **依赖**: Task 5, Task 6
 - **描述**:
@@ -155,7 +155,7 @@
   - `programmatic` TR-9.2: 视频流地址获取并播放
   - `human-judgement` TR-9.3: 详情页布局合理
 
-## [ ] Task 10: V1 集成与可运行性验证
+## [x] Task 10: V1 集成与可运行性验证
 - **优先级**: high
 - **依赖**: Task 1~9
 - **描述**:

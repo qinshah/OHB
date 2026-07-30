@@ -1,0 +1,263 @@
+import { media } from '@kit.MediaKit';
+import { BusinessError } from '@kit.BasicServicesKit';
+import { IPlayerEngine } from './IPlayerEngine';
+import { PlaybackState } from './PlayerTypes';
+import { Logger } from '../common/utils/Logger';
+
+/**
+ * 默认内核：基于 @ohos.multimedia.avplayer（AP-3）
+ * 通过状态机驱动：idle → initialized → prepared → playing/paused → completed
+ */
+export class AvPlayerEngine implements IPlayerEngine {
+  private player: media.AVPlayer | null = null;
+  private state: PlaybackState = PlaybackState.Idle;
+  private surfaceId: string = '';
+  private pendingUrl: string = '';
+  private pendingHeaders: Record<string, string> = {};
+  private positionMs: number = 0;
+  private durationMs: number = 0;
+  private bufferedMs: number = 0;
+  private volume: number = 1.0;
+  private speed: number = 1.0;
+
+  private stateCb: ((state: PlaybackState) => void) | null = null;
+  private progressCb: ((positionMs: number, durationMs: number, bufferedMs: number) => void) | null = null;
+  private errorCb: ((code: number, message: string) => void) | null = null;
+  private completionCb: (() => void) | null = null;
+
+  private setState(s: PlaybackState): void {
+    this.state = s;
+    if (this.stateCb !== null) {
+      this.stateCb(s);
+    }
+  }
+
+  private async ensurePlayer(): Promise<media.AVPlayer> {
+    if (this.player !== null) {
+      return this.player;
+    }
+    const p = await media.createAVPlayer();
+    this.bindEvents(p);
+    this.player = p;
+    return p;
+  }
+
+  private bindEvents(p: media.AVPlayer): void {
+    p.on('stateChange', (st: media.AVPlayerState) => {
+      Logger.info('AvEngine', `stateChange -> ${st}`);
+      switch (st) {
+        case 'initialized':
+          if (this.surfaceId.length > 0) {
+            p.surfaceId = this.surfaceId;
+          }
+          p.prepare();
+          break;
+        case 'prepared':
+          this.durationMs = p.duration > 0 ? p.duration : this.durationMs;
+          this.setState(PlaybackState.Prepared);
+          // 恢复应用音量与倍速设置
+          p.setVolume(this.volume);
+          p.setSpeed(AvPlayerEngine.toAvSpeed(this.speed));
+          break;
+        case 'playing':
+          this.setState(PlaybackState.Playing);
+          break;
+        case 'paused':
+          this.setState(PlaybackState.Paused);
+          break;
+        case 'completed':
+          this.setState(PlaybackState.Completed);
+          if (this.completionCb !== null) {
+            this.completionCb();
+          }
+          break;
+        case 'stopped':
+          this.setState(PlaybackState.Stopped);
+          break;
+        case 'released':
+          this.setState(PlaybackState.Released);
+          break;
+        case 'error':
+          this.setState(PlaybackState.Error);
+          break;
+        default:
+          break;
+      }
+    });
+
+    p.on('error', (err: BusinessError) => {
+      Logger.error('AvEngine', `error ${err.code}: ${err.message}`);
+      this.setState(PlaybackState.Error);
+      if (this.errorCb !== null) {
+        this.errorCb(err.code, err.message);
+      }
+    });
+
+    p.on('timeUpdate', (time: number) => {
+      this.positionMs = time;
+      if (this.durationMs <= 0 && p.duration > 0) {
+        this.durationMs = p.duration;
+      }
+      if (this.progressCb !== null) {
+        this.progressCb(this.positionMs, this.durationMs, this.bufferedMs);
+      }
+    });
+
+    p.on('durationUpdate', (duration: number) => {
+      this.durationMs = duration;
+    });
+
+    p.on('bufferingUpdate', (infoType: media.BufferingInfoType, value: number) => {
+      if (infoType === media.BufferingInfoType.BUFFERING_PERCENT) {
+        this.bufferedMs = this.durationMs > 0 ? Math.floor(this.durationMs * value / 100) : 0;
+      }
+    });
+
+    p.on('seekDone', (time: number) => {
+      this.positionMs = time;
+      if (this.progressCb !== null) {
+        this.progressCb(this.positionMs, this.durationMs, this.bufferedMs);
+      }
+    });
+  }
+
+  async setSource(url: string, headers: Record<string, string>): Promise<void> {
+    this.pendingUrl = url;
+    this.pendingHeaders = headers;
+    this.setState(PlaybackState.Preparing);
+    const p = await this.ensurePlayer();
+    if (this.state === PlaybackState.Released) {
+      return;
+    }
+    if (Object.keys(headers).length > 0) {
+      const src = media.createMediaSourceWithUrl(url, headers);
+      p.setMediaSource(src);
+    } else {
+      p.url = url;
+    }
+  }
+
+  setSurface(surfaceId: string): void {
+    this.surfaceId = surfaceId;
+    // surface 晚于 initialized 到达时补绑
+    if (this.player !== null && surfaceId.length > 0) {
+      try {
+        this.player.surfaceId = surfaceId;
+      } catch (e) {
+        Logger.error('AvEngine', `late bind surface fail: ${JSON.stringify(e)}`);
+      }
+    }
+  }
+
+  async play(): Promise<void> {
+    if (this.player === null) {
+      return;
+    }
+    try {
+      await this.player.play();
+    } catch (e) {
+      Logger.error('AvEngine', `play fail: ${JSON.stringify(e)}`);
+    }
+  }
+
+  async pause(): Promise<void> {
+    if (this.player === null) {
+      return;
+    }
+    try {
+      await this.player.pause();
+    } catch (e) {
+      Logger.error('AvEngine', `pause fail: ${JSON.stringify(e)}`);
+    }
+  }
+
+  async seekTo(positionMs: number): Promise<void> {
+    if (this.player === null) {
+      return;
+    }
+    try {
+      await this.player.seek(positionMs);
+    } catch (e) {
+      Logger.error('AvEngine', `seek fail: ${JSON.stringify(e)}`);
+    }
+  }
+
+  async setVolume(volume: number): Promise<void> {
+    this.volume = Math.max(0, Math.min(1, volume));
+    if (this.player !== null) {
+      try {
+        await this.player.setVolume(this.volume);
+      } catch (e) {
+        Logger.error('AvEngine', `setVolume fail: ${JSON.stringify(e)}`);
+      }
+    }
+  }
+
+  async setSpeed(speed: number): Promise<void> {
+    this.speed = speed;
+    if (this.player !== null) {
+      try {
+        this.player.setSpeed(AvPlayerEngine.toAvSpeed(speed));
+      } catch (e) {
+        Logger.error('AvEngine', `setSpeed fail: ${JSON.stringify(e)}`);
+      }
+    }
+  }
+
+  /** AVPlayer 仅支持离散倍速档位，映射到最近档位 */
+  private static toAvSpeed(speed: number): media.PlaybackSpeed {
+    if (speed <= 0.75) {
+      return media.PlaybackSpeed.SPEED_FORWARD_0_75_X;
+    }
+    if (speed >= 2.0) {
+      return media.PlaybackSpeed.SPEED_FORWARD_2_00_X;
+    }
+    if (speed >= 1.5) {
+      return media.PlaybackSpeed.SPEED_FORWARD_1_50_X;
+    }
+    if (speed >= 1.25) {
+      return media.PlaybackSpeed.SPEED_FORWARD_1_25_X;
+    }
+    return media.PlaybackSpeed.SPEED_FORWARD_1_00_X;
+  }
+
+  async release(): Promise<void> {
+    if (this.player !== null) {
+      try {
+        await this.player.release();
+      } catch (e) {
+        Logger.error('AvEngine', `release fail: ${JSON.stringify(e)}`);
+      }
+      this.player = null;
+    }
+    this.setState(PlaybackState.Released);
+  }
+
+  getState(): PlaybackState {
+    return this.state;
+  }
+
+  getPosition(): number {
+    return this.positionMs;
+  }
+
+  getDuration(): number {
+    return this.durationMs;
+  }
+
+  onStateChange(cb: (state: PlaybackState) => void): void {
+    this.stateCb = cb;
+  }
+
+  onProgress(cb: (positionMs: number, durationMs: number, bufferedMs: number) => void): void {
+    this.progressCb = cb;
+  }
+
+  onError(cb: (code: number, message: string) => void): void {
+    this.errorCb = cb;
+  }
+
+  onCompletion(cb: () => void): void {
+    this.completionCb = cb;
+  }
+}
