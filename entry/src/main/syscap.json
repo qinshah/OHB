@@ -7,6 +7,11 @@
   },
   "production": {
     "removedSysCaps": [
+      "SystemCapability.Resourceschedule.BackgroundProcessManager",
+      "SystemCapability.Test.PerfTest",
+      "SystemCapability.Communication.FusionConnectivity.Core",
+      "SystemCapability.ArkUI.ArkUI.Circle",
+      "SystemCapability.Applications.IntelligentScene",
       "SystemCapability.Notification.CommonEvent",
       "SystemCapability.Multimedia.MediaLibrary.Core",
       "SystemCapability.Multimedia.MediaLibrary.DistributedCore",
