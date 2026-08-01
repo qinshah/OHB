@@ -129,12 +129,18 @@ export class AvPlayerEngine implements IPlayerEngine {
     if (this.state === PlaybackState.Released) {
       return;
     }
-    if (Object.keys(headers).length > 0) {
-      const src = media.createMediaSourceWithUrl(url, headers);
-      p.setMediaSource(src);
-    } else {
-      p.url = url;
-    }
+    // PlaybackStrategy 为必填参数；不传时 x86 设备会触发 401: strategy type should be PlaybackStrategy
+    const strategy: media.PlaybackStrategy = {
+      preferredBufferDuration: 20,
+      preferredBufferDurationForPlaying: 0.3,
+      showFirstFrameOnPrepare: true
+    };
+    const hasHeaders = Object.keys(headers).length > 0;
+    const src = hasHeaders
+      ? media.createMediaSourceWithUrl(url, headers)
+      : media.createMediaSourceWithUrl(url);
+    // 主路径：始终传入 PlaybackStrategy，保证 x86 / ARM 架构行为一致
+    p.setMediaSource(src, strategy);
   }
 
   setSurface(surfaceId: string): void {
