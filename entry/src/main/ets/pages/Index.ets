@@ -115,7 +115,11 @@ struct Index {
           .tabBar(new BottomTabBarStyle({
             normal: item.normalIcon,
             selected: item.selectedIcon
-          }, item.label))
+          }, item.label)
+            .labelStyle({
+              unselectedColor: AppColors.TEXT_SECONDARY,
+              selectedColor: AppColors.BRAND
+            }))
         }, (item: HdsTabItem) => item.label)
       }
       .barOverlap(true)
