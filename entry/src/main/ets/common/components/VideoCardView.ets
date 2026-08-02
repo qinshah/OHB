@@ -7,7 +7,7 @@ import { AppColors } from '../../theme/AppTheme';
  */
 @Component
 export struct VideoCardView {
-  @ObjectLink card: VideoCard;
+  @Prop card: VideoCard;
   onCardClick: (bvid: string) => void = () => {
   };
 

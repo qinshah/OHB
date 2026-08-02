@@ -1,5 +1,5 @@
 import { media } from '@kit.MediaKit';
-import { BusinessError } from '@kit.BasicServicesKit';
+import { BusinessError, deviceInfo } from '@kit.BasicServicesKit';
 import { IPlayerEngine } from './IPlayerEngine';
 import { PlaybackState } from './PlayerTypes';
 import { Logger } from '../common/utils/Logger';
@@ -54,6 +54,9 @@ export class AvPlayerEngine implements IPlayerEngine {
           break;
         case 'prepared':
           this.durationMs = p.duration > 0 ? p.duration : this.durationMs;
+          // 显式设置视频缩放类型，确保 x86 设备渲染管线正确输出画面
+          p.videoScaleType = media.VideoScaleType.VIDEO_SCALE_TYPE_FIT;
+          Logger.info('AvEngine', `prepared: ${p.width}x${p.height}, dur=${this.durationMs}ms`);
           this.setState(PlaybackState.Prepared);
           // 恢复应用音量与倍速设置
           p.setVolume(this.volume);
@@ -129,18 +132,42 @@ export class AvPlayerEngine implements IPlayerEngine {
     if (this.state === PlaybackState.Released) {
       return;
     }
-    // PlaybackStrategy 为必填参数；不传时 x86 设备会触发 401: strategy type should be PlaybackStrategy
-    const strategy: media.PlaybackStrategy = {
-      preferredBufferDuration: 20,
-      preferredBufferDurationForPlaying: 0.3,
-      showFirstFrameOnPrepare: true
-    };
+    const strategy: media.PlaybackStrategy = AvPlayerEngine.buildStrategy();
     const hasHeaders = Object.keys(headers).length > 0;
     const src = hasHeaders
       ? media.createMediaSourceWithUrl(url, headers)
       : media.createMediaSourceWithUrl(url);
-    // 主路径：始终传入 PlaybackStrategy，保证 x86 / ARM 架构行为一致
     p.setMediaSource(src, strategy);
+  }
+
+  /** 根据设备架构构建播放策略；x86 设备解码能力弱，需针对性优化 */
+  private static buildStrategy(): media.PlaybackStrategy {
+    if (AvPlayerEngine.isX86Device()) {
+      // x86：减小缓冲总量降低内存压力，提高起播水位线吸收解码抖动，
+      // 关闭首帧渲染避免 prepare 阶段因软解卡顿
+      return {
+        preferredBufferDuration: 15,
+        preferredBufferDurationForPlaying: 0.5,
+        showFirstFrameOnPrepare: false
+      };
+    }
+    return {
+      preferredBufferDuration: 20,
+      preferredBufferDurationForPlaying: 0.3,
+      showFirstFrameOnPrepare: true
+    };
+  }
+
+  private static isX86Device(): boolean {
+    // HarmonyOS 设备通常为 ARM 架构，x86 设备主要是模拟器
+    // 可以通过 deviceInfo.hardwareModel 或其他方式判断
+    try {
+      const model = deviceInfo.hardwareModel;
+      // 检查是否为已知的 x86 设备型号（主要是模拟器）
+      return model.includes('x86') || model.includes('emulator');
+    } catch (e) {
+      return false;
+    }
   }
 
   setSurface(surfaceId: string): void {

@@ -142,46 +142,56 @@
 - [ ] Checkpoint 95: 音乐列表加载、播放正常
 - [ ] Checkpoint 96: MediaSession（锁屏控制）正常
 
+### 沉浸光感（底部导航栏）
+- [x] Checkpoint 97: 底部导航栏沉浸光感效果正确（barFloatingStyle + systemMaterial/ImmersiveMaterial 渲染）
+- [x] Checkpoint 98: 不支持沉浸光感的设备/API（sdkApiVersion < 26）回退为普通不透明导航栏，功能正常
+- [ ] Checkpoint 99: 底部 Tab 内容视觉效果自然
+
 ## P3: 质量与打磨验证
 
 ### 单元测试（V1 降级，后续补充）
-- [ ] Checkpoint 97: 网络层/WBI 签名单元测试通过
-- [ ] Checkpoint 98: `Result`/`DataState`/`AppError` 状态机测试通过
-- [ ] Checkpoint 99: 持久化导入导出逻辑测试通过
-- [ ] Checkpoint 100: `PlayerController` 状态机测试通过
-- [ ] Checkpoint 101: 测试用例设计合理
+- [ ] Checkpoint 100: 网络层/WBI 签名单元测试通过
+- [ ] Checkpoint 101: `Result`/`DataState`/`AppError` 状态机测试通过
+- [ ] Checkpoint 102: 持久化导入导出逻辑测试通过
+- [ ] Checkpoint 103: `PlayerController` 状态机测试通过
+- [ ] Checkpoint 104: 测试用例设计合理
 
 ### 性能
-- [ ] Checkpoint 102: 首页首屏加载 < 2s（正常网络）
-- [ ] Checkpoint 103: 视频起播 < 1s
-- [ ] Checkpoint 104: 列表/弹幕滚动 ≥ 60fps
-- [ ] Checkpoint 105: 内存占用合理，无泄漏
+- [ ] Checkpoint 105: 首页首屏加载 < 2s（正常网络）
+- [ ] Checkpoint 106: 视频起播 < 1s
+- [ ] Checkpoint 107: 列表/弹幕滚动 ≥ 60fps
+- [ ] Checkpoint 108: 内存占用合理，无泄漏
 
 ### 多设备深度适配
-- [ ] Checkpoint 106: 手机设备显示与操作正常
-- [ ] Checkpoint 107: 平板大屏适配正常（分栏/瀑布流）
-- [ ] Checkpoint 108: 折叠屏折叠/展开切换正常
-- [ ] Checkpoint 109: 多窗口模式正常
+- [ ] Checkpoint 109: 手机设备显示与操作正常
+- [ ] Checkpoint 110: 平板大屏适配正常（分栏/瀑布流）
+- [ ] Checkpoint 111: 折叠屏折叠/展开切换正常
+- [ ] Checkpoint 112: 多窗口模式正常
 
 ### UI/UX
-- [ ] Checkpoint 110: 整体 UI 符合 HarmonyOS Design
-- [ ] Checkpoint 111: 深色模式所有页面正常
-- [ ] Checkpoint 112: 转场动画流畅
-- [ ] Checkpoint 113: 字体大小设置实时生效
+- [ ] Checkpoint 113: 整体 UI 符合 HarmonyOS Design
+- [ ] Checkpoint 114: 深色模式所有页面正常
+- [ ] Checkpoint 115: 转场动画流畅
+- [ ] Checkpoint 116: 字体大小设置实时生效
 
 ### 代码质量
-- [ ] Checkpoint 114: ArkTS 严格模式无 lint 错误
-- [ ] Checkpoint 115: 模块分层清晰、职责单一
-- [ ] Checkpoint 116: 关键纯逻辑有单元测试
+- [ ] Checkpoint 117: ArkTS 严格模式无 lint 错误
+- [ ] Checkpoint 118: 模块分层清晰、职责单一
+- [ ] Checkpoint 119: 关键纯逻辑有单元测试
 
 ### 安全
-- [ ] Checkpoint 117: 用户凭证加密存储
-- [ ] Checkpoint 118: HTTPS 加密传输
-- [ ] Checkpoint 119: 敏感操作需认证
+- [ ] Checkpoint 120: 用户凭证加密存储
+- [ ] Checkpoint 121: HTTPS 加密传输
+- [ ] Checkpoint 122: 敏感操作需认证
 
 ### 发布准备
-- [ ] Checkpoint 120: 应用图标/启动图正确
-- [ ] Checkpoint 121: 签名打包正常
-- [ ] Checkpoint 122: 版本号正确
-- [ ] Checkpoint 123: 权限声明完整
-- [ ] Checkpoint 124: 全功能回归通过
+- [ ] Checkpoint 123: 应用图标/启动图正确
+- [ ] Checkpoint 124: 签名打包正常
+- [ ] Checkpoint 125: 版本号正确
+- [ ] Checkpoint 126: 权限声明完整
+- [ ] Checkpoint 127: 全功能回归通过
+
+### 沉浸光感（全局打磨）
+- [ ] Checkpoint 128: 各页面沉浸光感效果正确（barFloatingStyle + systemMaterial 一致性）
+- [ ] Checkpoint 129: 不支持设备回退为普通组件，功能正常
+- [ ] Checkpoint 130: 深色/浅色模式下沉浸效果均正确

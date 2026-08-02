@@ -288,6 +288,25 @@
   - `programmatic` TR-20.1: 番剧模块正常
   - `programmatic` TR-20.2: 音乐播放 + MediaSession
 
+## [x] Task 24: 底部导航栏沉浸光感适配（P2）
+- **优先级**: medium
+- **依赖**: Task 1
+- **描述**:
+  - 适配 HarmonyOS 沉浸光感（Immersive Light）：底部 Tab 栏使用 barFloatingStyle + ImmersiveMaterial 材质效果，实现沉浸视觉
+  - **兼容回退**：通过 `deviceInfo.sdkApiVersion >= 26` 检测，不支持时回退为普通 `barBackgroundColor` 不透明导航栏
+  - 使用 `Tabs.barFloatingStyle({ barBottomMargin: 0, systemMaterial: new uiMaterial.ImmersiveMaterial({...}) })` 设置浮动沉浸材质
+  - 配合 `barOverlap(true)` 让内容延伸至导航栏下方，透过半透明材质显现沉浸效果
+  - 支持时 `barBackgroundColor` 设为透明（`Color.Transparent`），让材质透出
+  - 不支持时使用普通不透明背景色（`AppColors.CARD_BG`）
+  - 两套 Tabs Builder：`buildImmersiveTabs()`（沉浸版）和 `buildNormalTabs()`（回退版），通过 `if/else` 在 `build()` 中切换
+  - ImmersiveHelper 工具类封装兼容检测与材质实例创建
+  - **SDK 说明**：@kit.UIDesignKit（HDS 组件 HdsTabs/hdsMaterial）仅在 HarmonyOS SDK 中可用，当前项目使用 OpenHarmony SDK，因此使用 @kit.ArkUI 提供的 uiMaterial API（since 26.0.0）
+- **验收标准**: AC-A-4
+- **测试需求**:
+  - `programmatic` TR-24.1: 支持 API 26 设备上底部导航栏呈现沉浸光感材质效果
+  - `programmatic` TR-24.2: 不支持的设备回退为普通不透明导航栏，功能正常
+  - `human-judgement` TR-24.3: 沉浸效果视觉自然，Tab 内容无遮挡、无裁切
+
 ---
 
 # P3: 质量与打磨
@@ -323,3 +342,20 @@
 - **测试需求**:
   - `programmatic` TR-23.1: 可正常打包安装
   - `human-judgement` TR-23.2: 图标/启动页精美
+
+## [ ] Task 25: 全局沉浸光感打磨（P3）
+- **优先级**: low
+- **依赖**: Task 24
+- **描述**:
+  - 在 P2 底部导航栏沉浸光感基础上，将 barFloatingStyle + ImmersiveMaterial 材质效果扩展至全应用所有页面
+  - **兼容回退**：所有沉浸效果在 API/设备不支持（`sdkApiVersion < 26`）时回退为普通组件
+  - 顶部状态栏区域沉浸（使用 Navigation/NavDestination 的 barFloatingStyle + systemMaterial 配置沉浸式标题栏）
+  - 视频详情页播放器区域沉浸（沉浸式播放体验）
+  - 搜索页、动态页、个人页等 Tab 页面底部导航栏材质效果一致性
+  - 二级页面（NavDestination）沉浸光感效果与首页一致
+  - 深色/浅色模式下沉浸效果均正确
+- **验收标准**: AC-A-4
+- **测试需求**:
+  - `programmatic` TR-25.1: 各页面沉浸光感效果正确
+  - `programmatic` TR-25.2: 不支持设备回退为普通组件，功能正常
+  - `human-judgement` TR-25.3: 全局沉浸体验一致自然，深/浅色模式均正确
