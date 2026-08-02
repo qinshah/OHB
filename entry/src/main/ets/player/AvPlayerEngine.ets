@@ -199,6 +199,23 @@ export class AvPlayerEngine implements IPlayerEngine {
     }
   }
 
+  /**
+   * 重建播放器并绑定新 surface（全屏/退出全屏切换）。
+   * 释放旧播放器（解除对旧 surface 的渲染），用最近一次源重建全新实例，
+   * 状态机走 initialized → prepared 时自动把 surfaceId 绑定到新实例。
+   */
+  async rebindSurface(surfaceId: string): Promise<void> {
+    this.surfaceId = surfaceId;
+    const url = this.pendingUrl;
+    const headers = this.pendingHeaders;
+    if (this.player === null || url.length === 0) {
+      // 尚无播放器/源：仅记录 surfaceId，setSource 时自动绑定
+      return;
+    }
+    await this.release();
+    await this.setSource(url, headers);
+  }
+
   async play(): Promise<void> {
     if (this.player === null) {
       return;

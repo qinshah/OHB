@@ -205,6 +205,49 @@
   - `human-judgement` TR-9.2.4: 连续按音量键 Hub 值实时变化
   - `human-judgement` TR-9.2.5: 双击播放/暂停、水平滑动预览并跳转进度
 
+## [x] Task 9.3: 播放器实例归 VM 持有 + 全屏 surface 重建（彻底修复黑屏）
+- **优先级**: high
+- **依赖**: Task 9.2
+- **描述**:
+  - **根因确认**：AVPlayer 在 playing 态直接改 `surfaceId` 时，若旧 surface 正在销毁或新 surface 未稳定
+    （全屏退出时两者同时发生），播放器会进入不可恢复的坏状态 → 黑屏（仍有声音），且再次全屏也黑屏
+  - **架构调整（按需求：VM 持有视频实例）**：
+    - `VideoDetailViewModel.controller` 持有 `PlayerController`（单一所有者），去掉 `bindPlayer`
+    - 视频页直接使用 `vm.controller`；全屏页经 `PlayerControllerHolder` 访问同一实例
+    - 视频页条件渲染：`!isFullscreen && xcReady` 才挂载 XComponent——全屏期间本页完全不渲染视频，
+      退出全屏后 `onPageShow` 延迟 400ms（等窗口转场/方向还原完成）再挂载
+  - **surface 切换改为重建播放器**（`IPlayerEngine.rebindSurface`）：
+    - `AvPlayerEngine.rebindSurface`：释放旧播放器 → 用同一源重建 → prepared 后自动起播
+    - `PlayerController.rebindSurface(sid, positionMs)`：记录 `pendingSeekMs`，prepared 后 seek 回原进度
+    - 两个页面的 XComponent `onLoad` 均调用 `rebindSurface`，进入/退出全屏都走重建路径，行为对称可靠
+- **验收标准**: AC-V1-3
+- **测试需求**:
+  - `programmatic` TR-9.3.1: 全量编译 0 报错
+  - `human-judgement` TR-9.3.2: 全屏进入/退出后画面均正常恢复，且可反复进出全屏
+  - `human-judgement` TR-9.3.3: 全屏切换后播放进度连续（从原进度继续）
+
+## [x] Task 9.4: 全屏 surface 重建改确定性驱动（修复真机仍黑屏）
+- **优先级**: high
+- **依赖**: Task 9.3
+- **描述**:
+  - **v2/v3 失效根因复盘**：两个依赖都不可靠——
+    1. 依赖 `onPageShow/onPageHide` 生命周期回调驱动 XComponent 重建（NavDestination 内容页实测可能不触发）
+    2. 重建 XComponent 时**复用同一个 XComponentController**，可能拿到失效的旧 surface id
+  - **v4 方案（完全确定性，不依赖生命周期回调与 @Observed）**：
+    - 详情页 200ms 轮询 `controller.isFullscreen`（普通字段直读），本地 `@State fsMirror` 镜像驱动条件渲染：
+      进入全屏 → 卸载本页 XComponent（不渲染视频）；退出全屏 → 延迟 300ms 重建
+    - 重建时**更换全新 XComponentController**（普通字段 + `@State xcEpoch` 递增触发重绘），
+      强制生成新节点与新 surface id
+    - `onLoad` 重绑 + 100ms×15 次 surface id 轮询兜底（`rebindDone` 幂等防重复），
+      绑定后重建播放器（rebindSurface）并 seek 回原进度
+  - **进入全屏恢复轻量 bindSurface**（目标 surface 全新有效，实测可用）：
+    v3 对入口也做重建反而引入卡顿；仅退出方向走重建，行为不对称但各取所需
+- **验收标准**: AC-V1-3
+- **测试需求**:
+  - `programmatic` TR-9.4.1: 全量编译 0 报错
+  - `human-judgement` TR-9.4.2: 退出全屏画面恢复、进度连续，反复进出全屏均正常
+  - `human-judgement` TR-9.4.3: 入口无重建卡顿
+
 ## [x] Task 10: V1 集成与可运行性验证
 - **优先级**: high
 - **依赖**: Task 1~9

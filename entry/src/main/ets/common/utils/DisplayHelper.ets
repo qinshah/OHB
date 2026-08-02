@@ -121,7 +121,7 @@ export class DisplayHelper {
       return;
     }
     try {
-      await DisplayHelper.win.setPreferredOrientation(window.Orientation.LANDSCAPE);
+      await DisplayHelper.win.setPreferredOrientation(window.Orientation.AUTO_ROTATION_LANDSCAPE);
       DisplayHelper.pLandscape = true;
     } catch (e) {
       Logger.error('Display', `setLandscape fail: ${JSON.stringify(e)}`);

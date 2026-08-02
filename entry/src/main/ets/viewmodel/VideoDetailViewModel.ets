@@ -6,7 +6,12 @@ import { VideoRepository } from '../data/repository/VideoRepository';
 import { PlayerController } from '../player/PlayerController';
 
 /**
- * 视频详情 ViewModel（Task 9）：详情 + 播放地址加载，驱动 PlayerController。
+ * 视频详情 ViewModel（Task 9）：详情 + 播放地址加载，持有并驱动 PlayerController。
+ *
+ * 播放器实例由 VM 持有（单一所有者）：
+ * - 视频页（VideoDetailPage）直接使用 vm.controller 渲染视频
+ * - 全屏页（VideoFullscreenPage）经 PlayerControllerHolder 访问同一实例播放
+ * - 全屏期间视频页条件渲染不挂载 XComponent；退出全屏后由 onLoad 重建 surface
  */
 @Observed
 export class VideoDetailViewModel {
@@ -15,15 +20,12 @@ export class VideoDetailViewModel {
   playUrlInfo: PlayUrlInfo | null = null;
   /** 播放地址加载错误 */
   playError: string = '';
+  /** 播放器实例（VM 持有；全屏页通过 PlayerControllerHolder 共享同一实例） */
+  controller: PlayerController = new PlayerController();
 
   private repo: VideoRepository = new VideoRepository();
-  private controller: PlayerController | null = null;
   /** 防竞态序号 */
   private loadSeq: number = 0;
-
-  bindPlayer(controller: PlayerController): void {
-    this.controller = controller;
-  }
 
   async load(bvid: string): Promise<void> {
     this.loadSeq++;
@@ -58,9 +60,7 @@ export class VideoDetailViewModel {
       return;
     }
     this.playUrlInfo = r.value;
-    if (this.controller !== null) {
-      await this.controller.load(this.playUrlInfo.url, PlayerController.defaultHeaders());
-    }
+    await this.controller.load(this.playUrlInfo.url, PlayerController.defaultHeaders());
   }
 
   /** 重试播放地址 */
@@ -74,8 +74,6 @@ export class VideoDetailViewModel {
 
   async release(): Promise<void> {
     this.loadSeq++;
-    if (this.controller !== null) {
-      await this.controller.release();
-    }
+    await this.controller.release();
   }
 }

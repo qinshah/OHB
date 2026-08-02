@@ -33,7 +33,7 @@
 ### 视频页基础播放
 - [ ] Checkpoint 21: 视频流地址正确获取并播放
 - [x] Checkpoint 22: 播放/暂停正常（控制层置顶可交互，按钮状态随内核实时刷新）
-- [x] Checkpoint 23: 全屏切换正常，横竖屏适配（返回详情页时重建 XComponent surface，修复黑屏）
+- [x] Checkpoint 23: 全屏切换正常，横竖屏适配（VM 持有播放器，全屏切换时重建播放器绑定新 surface，修复黑屏）
 - [x] Checkpoint 24: 进度跳转（seek）正常（进度条 250ms 同步实时刷新、可拖动，支持水平滑动手势预览）
 - [x] Checkpoint 25: 音量调节正常（Hub 显示 streamVolumeChange 监听到的实际值，硬件音量键同步弹出）
 - [x] Checkpoint 26: 亮度调节正常

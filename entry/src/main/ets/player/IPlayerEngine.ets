@@ -10,6 +10,12 @@ export interface IPlayerEngine {
   setSource(url: string, headers: Record<string, string>): Promise<void>;
   /** 绑定渲染 surface */
   setSurface(surfaceId: string): void;
+  /**
+   * 重建播放器并切换到新 surface（全屏/退出全屏切换专用）。
+   * AVPlayer 在播放中直接改 surfaceId 时，若旧 surface 正在销毁或新 surface 未稳定，
+   * 会进入不可恢复的黑屏状态；重建播放器从同一源重新绑定新 surface 可彻底规避。
+   */
+  rebindSurface(surfaceId: string): Promise<void>;
   play(): Promise<void>;
   pause(): Promise<void>;
   /** 跳转（毫秒） */

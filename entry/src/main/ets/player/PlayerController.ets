@@ -61,6 +61,8 @@ export class PlayerController {
   private sysVolumeChangeCb: (() => void) | null = null;
   /** 本控制器注册到 SystemAudioHelper 的监听（release 时反注册，避免泄漏） */
   private volumeListenerCb: (() => void) | null = null;
+  /** 重建播放器后需要恢复到的进度（ms），prepared 时消费 */
+  private pendingSeekMs: number = 0;
 
   constructor(engine: IPlayerEngine | null = null) {
     this.engine = engine ?? new AvPlayerEngine();
@@ -125,6 +127,12 @@ export class PlayerController {
         // 准备完成自动起播
         engine.play();
         this.durationMs = engine.getDuration();
+        // surface 重建（全屏切换）后恢复到原进度
+        if (this.pendingSeekMs > 0) {
+          const p = this.pendingSeekMs;
+          this.pendingSeekMs = 0;
+          engine.seekTo(p);
+        }
       }
     });
     engine.onProgress((pos: number, dur: number, buffered: number) => {
@@ -157,10 +165,25 @@ export class PlayerController {
     this.engine.setSurface(surfaceId);
   }
 
+  /**
+   * 重建播放器并切换到新 surface（全屏/退出全屏切换）。
+   * 内部释放旧播放器并用同一源重建，prepared 后自动恢复到 positionMs 继续播放，
+   * 彻底规避 AVPlayer 直接切 surfaceId 的黑屏问题。
+   */
+  async rebindSurface(surfaceId: string, positionMs: number): Promise<void> {
+    this.pendingSeekMs = Math.max(0, positionMs);
+    // 等待新实例的首帧尺寸上报
+    this.aspectRatio = 0;
+    this.videoWidth = 0;
+    this.videoHeight = 0;
+    await this.engine.rebindSurface(surfaceId);
+  }
+
   /** 加载并播放 */
   async load(url: string, headers: Record<string, string>): Promise<void> {
     this.errorMessage = '';
     this.isCompleted = false;
+    this.pendingSeekMs = 0;
     this.positionMs = 0;
     this.aspectRatio = 0;
     this.videoWidth = 0;

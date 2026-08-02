@@ -16,7 +16,8 @@ import { Logger } from '../common/utils/Logger';
  *     aspect > 1.2 → 应用窗口全屏 + 横向
  *     aspect <= 1.2 → 仅应用窗口全屏，保持竖屏
  * - 退出时（aboutToDisappear）由 NavService 路由拦截器自动触发 DisplayHelper.exitAppFullscreen
- * - XComponent 复用共享控制器的 surface 绑定（页面 mount 时重新 bindSurface）
+ * - 进入全屏使用轻量 bindSurface（目标 surface 全新有效，实测可用，无重建卡顿）；
+ *   退出全屏回详情页时才走重建播放器路径（详情页 surface 在全屏期间失效，必须重建）
  *
  * 注意：本页不释放 PlayerController（释放由 VideoDetailPage 负责）
  */
@@ -52,7 +53,7 @@ export struct VideoFullscreenPage {
   }
 
   onPageShow(): void {
-    // 从其它页面返回时重新绑定本页 surface（XComponent onLoad 仅触发一次）
+    // 从其它页面返回时轻量重绑本页 surface（XComponent onLoad 仅触发一次）
     const sid = this.xcController.getXComponentSurfaceId();
     if (sid.length > 0) {
       this.controller.bindSurface(sid);
