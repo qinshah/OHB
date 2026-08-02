@@ -31,4 +31,9 @@ export interface IPlayerEngine {
   onProgress(cb: (positionMs: number, durationMs: number, bufferedMs: number) => void): void;
   onError(cb: (code: number, message: string) => void): void;
   onCompletion(cb: () => void): void;
+  /**
+   * 视频尺寸变化回调：内核在 prepared / videoSizeChanged 时上报。
+   * UI 层据此按宽高比渲染、决定全屏方向。
+   */
+  onVideoSizeChange(cb: (width: number, height: number) => void): void;
 }

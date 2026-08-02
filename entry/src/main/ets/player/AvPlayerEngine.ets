@@ -24,6 +24,7 @@ export class AvPlayerEngine implements IPlayerEngine {
   private progressCb: ((positionMs: number, durationMs: number, bufferedMs: number) => void) | null = null;
   private errorCb: ((code: number, message: string) => void) | null = null;
   private completionCb: (() => void) | null = null;
+  private videoSizeCb: ((width: number, height: number) => void) | null = null;
 
   private setState(s: PlaybackState): void {
     this.state = s;
@@ -50,6 +51,8 @@ export class AvPlayerEngine implements IPlayerEngine {
           if (this.surfaceId.length > 0) {
             p.surfaceId = this.surfaceId;
           }
+          // 在 prepare 前设置缩放类型，确保首帧即按正确比例渲染
+          p.videoScaleType = media.VideoScaleType.VIDEO_SCALE_TYPE_FIT;
           p.prepare();
           break;
         case 'prepared':
@@ -57,6 +60,8 @@ export class AvPlayerEngine implements IPlayerEngine {
           // 显式设置视频缩放类型，确保 x86 设备渲染管线正确输出画面
           p.videoScaleType = media.VideoScaleType.VIDEO_SCALE_TYPE_FIT;
           Logger.info('AvEngine', `prepared: ${p.width}x${p.height}, dur=${this.durationMs}ms`);
+          // 上报视频尺寸，UI 层按宽高比渲染、决定全屏方向
+          this.notifyVideoSize(p.width, p.height);
           this.setState(PlaybackState.Prepared);
           // 恢复应用音量与倍速设置
           p.setVolume(this.volume);
@@ -122,6 +127,18 @@ export class AvPlayerEngine implements IPlayerEngine {
         this.progressCb(this.positionMs, this.durationMs, this.bufferedMs);
       }
     });
+
+    // 视频尺寸变化（清晰度切换 / 首帧解码完成）
+    p.on('videoSizeChange', (width: number, height: number) => {
+      Logger.info('AvEngine', `videoSizeChange -> ${width}x${height}`);
+      this.notifyVideoSize(width, height);
+    });
+  }
+
+  private notifyVideoSize(width: number, height: number): void {
+    if (width > 0 && height > 0 && this.videoSizeCb !== null) {
+      this.videoSizeCb(width, height);
+    }
   }
 
   async setSource(url: string, headers: Record<string, string>): Promise<void> {
@@ -271,6 +288,14 @@ export class AvPlayerEngine implements IPlayerEngine {
   }
 
   getPosition(): number {
+    // 优先读取内核实时位置（timeUpdate 事件之外的兜底），失败回退缓存值
+    if (this.player !== null) {
+      try {
+        return this.player.currentTime;
+      } catch (e) {
+        Logger.error('AvEngine', `getPosition fail: ${JSON.stringify(e)}`);
+      }
+    }
     return this.positionMs;
   }
 
@@ -292,5 +317,9 @@ export class AvPlayerEngine implements IPlayerEngine {
 
   onCompletion(cb: () => void): void {
     this.completionCb = cb;
+  }
+
+  onVideoSizeChange(cb: (width: number, height: number) => void): void {
+    this.videoSizeCb = cb;
   }
 }

@@ -27,6 +27,7 @@
 - **默认实现 `AvPlayerEngine`**：基于 `@ohos.multimedia.avplayer` (AVPlayer)。
 - **预留内核接入点**：通过同一接口可快速接入 `mpv`（C++ via NAPI）、`mdk` 等第三方内核，切换仅需替换 Engine 实例，UI 层无感。
 - **`PlayerController`**：统一控制器，持有当前 Engine，向上暴露状态流（播放态、进度、缓冲、错误），向下转发操作。设置项（默认清晰度/倍速/解码策略）通过 Controller 注入。
+- **系统音量调节（重要约束）**：HarmonyOS 不允许应用直接调用 `AudioVolumeGroupManager.setVolume` 调节系统音量，必须通过 `AVVolumePanel` 组件（`@kit.AudioKit`）完成。实现上：`PlayerControlView` 内放置隐藏的 `AVVolumePanel`（`volumeParameter.position` 设为 `(-1,-1)` 隐藏系统默认音量条、尺寸 0），手势滑动时更新其 `volumeLevel`（绝对档位）即驱动系统音量变化；`SystemAudioHelper` 仅负责通过 `AudioVolumeManager.on('streamVolumeChange')` 监听真实变化并回写 `controller.systemVolume`，Hub 据此显示实际值。`PlayerController` 不再持有 `setSystemVolume` 接口。
 
 ### AP-4: 持久化与设置导入导出（与 PiliPlus 同能力但更规范）
 - **设置项独立存储**：每个设置项独立 key（基于 `@ohos.data.preferences` 或 RDB），修改任意设置只写对应 key，不整体重写。

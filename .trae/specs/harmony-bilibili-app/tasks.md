@@ -155,6 +155,56 @@
   - `programmatic` TR-9.2: 视频流地址获取并播放
   - `human-judgement` TR-9.3: 详情页布局合理
 
+## [x] Task 9.1: 播放器控制 UI 优化（图层优先级 + 实时状态 + 音量监听）
+- **优先级**: high
+- **依赖**: Task 5, Task 9
+- **描述**:
+  - **Stack 图层优先级修正**（底→顶）：AVVolumePanel（隐藏）→ Hub（音量/亮度提示）→ 音量/亮度滑动监听层 → 控制层（进度条、播放/暂停、全屏按钮）
+    - 控制层置于最顶层，避免被手势层遮挡导致进度条不可拖、按钮点不动、状态不更新
+    - 底部控制条空白区域 `hitTestBehavior(None)`，透传给手势层；按钮与 Slider 自身仍可交互
+  - **实时状态修复**（参考 PiliPlus 连续进度流）：
+    - 播放中每 500ms 通过 `syncProgress()` 轮询内核 `currentTime` 兜底刷新进度
+    - `AvPlayerEngine.getPosition()` 优先读取实时 `currentTime`
+    - 播放/暂停按钮图标由 `@ObjectLink` 绑定 `controller.state` 实时刷新
+  - **音量监听修复**：
+    - `SystemAudioHelper` 升级为多监听者（`addVolumeListener`/`removeVolumeListener`），Controller 回写 + UI Hub 提示并存
+    - `PlayerControlView` 显式注册监听替代不可靠的 `@Watch + @ObjectLink` 方案；硬件音量键变化也会弹出 Hub
+    - Hub 显示 `streamVolumeChange` 回写的**实际监听值**（文字 + 细进度条），并同步面板档位
+  - `PlayerController` 增加 `syncSystemVolume()` / `syncProgress()`，release 时反注册音量监听避免泄漏
+- **验收标准**: AC-V1-3
+- **测试需求**:
+  - `programmatic` TR-9.1.1: 全量编译 0 报错
+  - `human-judgement` TR-9.1.2: 进度条实时前进、可拖动 seek
+  - `human-judgement` TR-9.1.3: 播放/暂停按钮状态实时切换
+  - `human-judgement` TR-9.1.4: 滑动调节音量/亮度时 Hub 显示实际值，硬件音量键同步弹出 Hub
+
+## [x] Task 9.2: 播放器体验修复（全屏返回黑屏 + 实时刷新 + 手势增强）
+- **优先级**: high
+- **依赖**: Task 9.1
+- **描述**:
+  - **修复全屏返回黑屏（有声音无画面）**：
+    - 根因：`AvPlayerEngine.setSurface('')` 对空串不生效，全屏退出时 AVPlayer 仍指向已销毁的全屏 surface；
+      详情页 XComponent 的 surface 在全屏覆盖期间失效，重绑旧 id 无效
+    - 方案：`VideoDetailPage` 在全屏返回时卸载并重建 XComponent（`xcMounted` 开关），
+      `onLoad` 用全新 surface id 重新绑定；`onPageHide` 时卸载释放 surface
+  - **进度条/音量/播放态实时刷新**：
+    - 弃用不可靠的 `@ObjectLink` 观察链路，改为 controller + 250ms UI 同步定时器，
+      将内核状态拷贝到本地 `@State` 镜像（posMs/durMs/playing/vol/bri/fullscreen）
+    - 播放中每 250ms 从内核同步真实进度（`syncProgress` 读 `currentTime`）
+  - **Hub 居中**：移除偏移，位于视频中心；支持音量/亮度/进度预览三态
+  - **手势增强**（参考 PiliPlus）：
+    - 去掉中央播放/暂停按钮（保留底部控制条）
+    - 双击播放/暂停、单击切换控制层
+    - 水平滑动设置进度：滑动中 Hub 显示目标进度（只预览），松手才真正 seek
+    - 垂直滑动保持左亮度/右音量
+- **验收标准**: AC-V1-3
+- **测试需求**:
+  - `programmatic` TR-9.2.1: 全量编译 0 报错
+  - `human-judgement` TR-9.2.2: 全屏进入/退出后画面正常恢复
+  - `human-judgement` TR-9.2.3: 进度条/时间/播放暂停图标实时刷新
+  - `human-judgement` TR-9.2.4: 连续按音量键 Hub 值实时变化
+  - `human-judgement` TR-9.2.5: 双击播放/暂停、水平滑动预览并跳转进度
+
 ## [x] Task 10: V1 集成与可运行性验证
 - **优先级**: high
 - **依赖**: Task 1~9

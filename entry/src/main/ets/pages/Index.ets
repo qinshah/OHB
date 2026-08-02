@@ -7,6 +7,7 @@ import { DynamicPage } from './DynamicPage';
 import { MinePage } from './MinePage';
 import { LoginPage } from './LoginPage';
 import { VideoDetailPage } from './VideoDetailPage';
+import { VideoFullscreenPage } from './VideoFullscreenPage';
 import { AppColors } from '../theme/AppTheme';
 import { RouteNames } from './RouteNames';
 import { NavService } from '../common/navigation/NavService';
@@ -68,6 +69,11 @@ struct Index {
     if (name === RouteNames.VIDEO_DETAIL) {
       NavDestination() {
         VideoDetailPage({ bvid: param as string })
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.VIDEO_FULLSCREEN) {
+      NavDestination() {
+        VideoFullscreenPage()
       }
       .hideTitleBar(true)
     } else if (name === RouteNames.LOGIN) {
