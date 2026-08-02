@@ -47,23 +47,20 @@ interface HdsTabItem {
 struct Index {
   navStack: NavPathStack = new NavPathStack();
   @State currentTab: number = 0;
-  private useHdsTabs: boolean = false;
+  private useHdsTabs: boolean = ImmersiveHelper.isHdsSupported;
   private hdsController: HdsTabsController = new HdsTabsController();
-  private hdsTabs: HdsTabItem[] = [];
+  private hdsTabs: HdsTabItem[] = TAB_LABELS.map((label: string, index: number): HdsTabItem => {
+    return {
+      label: label,
+      normalIcon: new SymbolGlyphModifier(TAB_ICONS[index])
+        .fontColor([AppColors.TEXT_SECONDARY]),
+      selectedIcon: new SymbolGlyphModifier(TAB_ICONS[index])
+        .fontColor([AppColors.BRAND]),
+    };
+  });
 
   aboutToAppear(): void {
     NavService.register(this.navStack);
-    this.useHdsTabs = ImmersiveHelper.isHdsSupported;
-    // 构建 HDS 页签配置：SymbolGlyphModifier 控制图标与选中/未选中颜色
-    this.hdsTabs = TAB_LABELS.map((label: string, index: number): HdsTabItem => {
-      return {
-        label: label,
-        normalIcon: new SymbolGlyphModifier(TAB_ICONS[index])
-          .fontColor([AppColors.TEXT_SECONDARY]),
-        selectedIcon: new SymbolGlyphModifier(TAB_ICONS[index])
-          .fontColor([AppColors.BRAND]),
-      };
-    });
   }
 
   @Builder
