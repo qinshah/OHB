@@ -30,12 +30,12 @@
 - **系统音量调节（重要约束）**：HarmonyOS 不允许应用直接调用 `AudioVolumeGroupManager.setVolume` 调节系统音量，必须通过 `AVVolumePanel` 组件（`@kit.AudioKit`）完成。实现上：`PlayerControlView` 内放置隐藏的 `AVVolumePanel`（`volumeParameter.position` 设为 `(-1,-1)` 隐藏系统默认音量条、尺寸 0），手势滑动时更新其 `volumeLevel`（绝对档位）即驱动系统音量变化；`SystemAudioHelper` 仅负责通过 `AudioVolumeManager.on('streamVolumeChange')` 监听真实变化并回写 `controller.systemVolume`，Hub 据此显示实际值。`PlayerController` 不再持有 `setSystemVolume` 接口。
 
 ### AP-4: 持久化与设置导入导出（与 PiliPlus 同能力但更规范）
-- **设置项独立存储**：每个设置项独立 key（基于 `@ohos.data.preferences` 或 RDB），修改任意设置只写对应 key，不整体重写。
-- **默认值表**：集中维护 `SettingDefaults`，所有 key 的默认值显式声明。
-- **导出**：遍历所有 key，**仅导出值 ≠ 默认值**的项，输出为 JSON（含 schema 版本号），体积小、可读、可 diff。
-- **导入**：读取导入 JSON，逐项写值；**导入数据中缺失的 key 视为重置为默认值**（删除该 key 或重置）。
-- **Schema 版本**：导出文件含 `schemaVersion`，支持未来迁移。
-- **敏感数据隔离**：Cookie/Token 等认证数据不进入设置导出，单独加密存储（参见 AP-5）。
+- **`PrefItem` 类**：含 `key` 和 `default` 两个属性，构造函数自动向 `prefItems` 集合添加 this；自身提供 `get`、`put`、`delete` 等方法，内部调用 preferences 实例的接口
+- **`Pref` 类**：不提供 get/put/delete 方法，只提供 static 属性的 `PrefItem` 实例，以及导入、导出和重置所有等接口
+- **导出**：直接调用鸿蒙 preferences 实例的 `getAll`，转成 JSON 字符串（含 schema 版本号）
+- **导入**：从 JSON 字符串获取键值对列表，`put` 回 preferences；缺失的项不管，不重置为默认
+- **重置**：调用 preferences 实例的接口清除所有设置
+- **敏感数据隔离**：Cookie/Token 等认证数据不进入设置导出，单独加密存储（参见 AP-5）
 
 ### AP-5: 多用户与认证框架
 - **`AccountManager`**：管理多账户列表 + 当前激活账户，切换账户时切换 Cookie/Token/用户级设置命名空间。
@@ -202,7 +202,7 @@
 ### AC-A-2: 设置导入导出
 - **Given**: 用户有多项非默认设置
 - **When**: 导出设置后再导入（仅含非默认项）
-- **Then**: 导出文件仅含非默认值项；导入后设置恢复；缺失项重置为默认值
+- **Then**: 导出文件仅含非默认值项；导入后设置恢复；缺失项保留原设置（不重置为默认）
 - **验证**: `programmatic`
 
 ### AC-A-3: 网络状态模型
