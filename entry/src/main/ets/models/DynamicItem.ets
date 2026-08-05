@@ -30,6 +30,14 @@ export class DynamicItem {
   videoDanmakuCount: number = 0;
   /** 图文动态的图片列表 */
   images: string[] = [];
+  /** 点赞数（P2 Task 18 互动） */
+  likeCount: number = 0;
+  /** 评论数 */
+  commentCount: number = 0;
+  /** 转发数 */
+  forwardCount: number = 0;
+  /** 是否已点赞 */
+  isLiked: boolean = false;
 }
 
 export class DynamicFeed {

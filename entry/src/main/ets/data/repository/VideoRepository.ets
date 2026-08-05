@@ -6,6 +6,7 @@ import { VideoDetail, VideoPage } from '../../models/VideoDetail';
 import { PlayUrlInfo } from '../../models/PlayUrlInfo';
 import { PrefsStorage } from '../../services/storage/PrefsStorage';
 import { AccountManager } from '../../services/account/AccountManager';
+import { CookieManager } from '../../network/CookieManager';
 import { common } from '@kit.AbilityKit';
 
 // ---- 原始 JSON 形状 ----
@@ -246,6 +247,80 @@ export class VideoRepository {
     info.qualityDesc = VideoRepository.qualityName(info.quality);
     info.timelength = d.timelength ?? 0;
     return Result.ok<PlayUrlInfo>(info);
+  }
+
+  // ---------- P2 Task 13：视频详情互动 ----------
+
+  /** 相关视频 */
+  async getRelated(bvid: string): Promise<Result<VideoCard[]>> {
+    const r = await this.api.relatedVideos(bvid);
+    if (!r.isOk) {
+      return Result.err<VideoCard[]>(r.error);
+    }
+    const list = r.value as RawRcmdItem[];
+    const cards = list.map((it: RawRcmdItem) => parseCard(it))
+      .filter((c: VideoCard) => c.bvid.length > 0);
+    return Result.ok<VideoCard[]>(cards);
+  }
+
+  /** 点赞（like=true 点赞 / false 取消） */
+  async likeVideo(aid: number, like: boolean): Promise<Result<boolean>> {
+    const r = await this.api.likeVideo(aid, like ? 1 : 2);
+    if (!r.isOk) {
+      return Result.err<boolean>(r.error);
+    }
+    return Result.ok<boolean>(true);
+  }
+
+  /** 投币（multiply 1~2） */
+  async coinVideo(aid: number, multiply: number = 1): Promise<Result<boolean>> {
+    const r = await this.api.coinVideo(aid, multiply, 0);
+    if (!r.isOk) {
+      return Result.err<boolean>(r.error);
+    }
+    return Result.ok<boolean>(true);
+  }
+
+  /** 一键三连 */
+  async tripleVideo(aid: number): Promise<Result<boolean>> {
+    const csrf = CookieManager.getInstance().csrf;
+    if (csrf.length === 0) {
+      return Result.err<boolean>(AppError.unauthorized('请先登录后三连'));
+    }
+    const r = await this.api.tripleVideo(aid, csrf);
+    if (!r.isOk) {
+      return Result.err<boolean>(r.error);
+    }
+    return Result.ok<boolean>(true);
+  }
+
+  /** 收藏/取消收藏（mediaId 为收藏夹 id） */
+  async favoriteVideo(aid: number, mediaId: number, add: boolean): Promise<Result<boolean>> {
+    const csrf = CookieManager.getInstance().csrf;
+    if (csrf.length === 0) {
+      return Result.err<boolean>(AppError.unauthorized('请先登录后收藏'));
+    }
+    const r = await this.api.favResourceDeal(aid,
+      add ? `${mediaId}` : '',
+      add ? '' : `${mediaId}`,
+      csrf);
+    if (!r.isOk) {
+      return Result.err<boolean>(r.error);
+    }
+    return Result.ok<boolean>(true);
+  }
+
+  /** 加入稍后再看 */
+  async addWatchLater(aid: number): Promise<Result<boolean>> {
+    const csrf = CookieManager.getInstance().csrf;
+    if (csrf.length === 0) {
+      return Result.err<boolean>(AppError.unauthorized('请先登录后使用稍后再看'));
+    }
+    const r = await this.api.toviewAdd(aid, csrf);
+    if (!r.isOk) {
+      return Result.err<boolean>(r.error);
+    }
+    return Result.ok<boolean>(true);
   }
 
   static qualityName(qn: number): string {

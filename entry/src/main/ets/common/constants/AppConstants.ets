@@ -8,6 +8,8 @@ export class AppConstants {
   static readonly APP_BASE: string = 'https://app.bilibili.com';
   static readonly PASSPORT_BASE: string = 'https://passport.bilibili.com';
   static readonly SEARCH_BASE: string = 'https://s.search.bilibili.com';
+  /** 直播接口域名 */
+  static readonly LIVE_BASE: string = 'https://api.live.bilibili.com';
 
   // ---- HTTP ----
   static readonly CONNECT_TIMEOUT: number = 10000;

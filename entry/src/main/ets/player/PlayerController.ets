@@ -7,6 +7,8 @@ import { PlaybackState } from './PlayerTypes';
 import { Logger } from '../common/utils/Logger';
 import { AppConstants } from '../common/constants/AppConstants';
 import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
+import { MediaSessionHelper } from '../services/media/MediaSessionHelper';
+import { avSession } from '@kit.AVSessionKit';
 
 /**
  * 统一播放控制器（AP-3 / Task 5）
@@ -35,6 +37,9 @@ export class PlayerController {
   videoHeight: number = 0;
   /** 视频宽高比 width/height，未就绪时为 0（UI 用此值渲染 XComponent） */
   aspectRatio: number = 0;
+  /** 媒体会话元数据（锁屏/控制中心显示，P2 Task 20） */
+  mediaTitle: string = '';
+  mediaArtist: string = '';
 
   /** 系统音量 0..1（实际监控值，由 SystemAudioHelper 监听器维护；调节由 UI 层 AVVolumePanel 完成） */
   systemVolume: number = 0;
@@ -76,6 +81,40 @@ export class PlayerController {
       }
     };
     SystemAudioHelper.addVolumeListener(this.volumeListenerCb);
+  }
+
+  /**
+   * 挂载媒体会话（MediaSession 锁屏控制，P2 Task 20）
+   * 在页面 aboutToAppear 时调用；失败静默降级不影响播放。
+   */
+  attachMediaSession(context: common.Context, title: string, artist: string): void {
+    this.mediaTitle = title;
+    this.mediaArtist = artist;
+    MediaSessionHelper.attach(context, title, artist, this.durationMs);
+    MediaSessionHelper.setCommandCallbacks(() => {
+      this.togglePlay();
+    }, () => {
+      this.engine.pause();
+    }, (time: number) => {
+      this.engine.seekTo(time);
+    });
+    this.syncMediaSessionState();
+  }
+
+  /** 同步媒体会话状态（播放/暂停 + 进度） */
+  private syncMediaSessionState(): void {
+    if (!MediaSessionHelper.isAttached) {
+      return;
+    }
+    let state: number = avSession.PlaybackState.PLAYBACK_STATE_PAUSE;
+    if (this.state === PlaybackState.Playing) {
+      state = avSession.PlaybackState.PLAYBACK_STATE_PLAY;
+    }
+    MediaSessionHelper.updateState(state, this.positionMs);
+  }
+
+  async detachMediaSession(): Promise<void> {
+    await MediaSessionHelper.detach();
   }
 
   /** 替换内核（AC-A-1：UI 与 Controller 无需改动，仅替换实例） */
@@ -123,6 +162,7 @@ export class PlayerController {
       this.state = s;
       this.isPreparing = s === PlaybackState.Preparing;
       this.isCompleted = s === PlaybackState.Completed;
+      this.syncMediaSessionState();
       if (s === PlaybackState.Prepared) {
         // 准备完成自动起播
         engine.play();

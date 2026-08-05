@@ -8,10 +8,32 @@ import { MinePage } from './MinePage';
 import { LoginPage } from './LoginPage';
 import { VideoDetailPage } from './VideoDetailPage';
 import { VideoFullscreenPage } from './VideoFullscreenPage';
+import { LivePage } from './LivePage';
+import { LiveRoomPage } from './LiveRoomPage';
+import { FavoritesPage } from './FavoritesPage';
+import { FavoriteDetailPage } from './FavoriteDetailPage';
+import { HistoryPage } from './HistoryPage';
+import { WatchLaterPage } from './WatchLaterPage';
+import { UserSpacePage } from './UserSpacePage';
+import { DynamicDetailPage } from './DynamicDetailPage';
+import { PublishDynamicPage } from './PublishDynamicPage';
+import { TopicPage } from './TopicPage';
+import { TopicFeedPage } from './TopicFeedPage';
+import { BangumiPage } from './BangumiPage';
+import { BangumiDetailPage } from './BangumiDetailPage';
+import { MusicPage } from './MusicPage';
 import { AppColors } from '../theme/AppTheme';
 import { RouteNames } from './RouteNames';
 import { NavService } from '../common/navigation/NavService';
 import { ImmersiveHelper } from '../common/utils/ImmersiveHelper';
+import {
+  BangumiDetailParam,
+  DynamicDetailParam,
+  FavoriteDetailParam,
+  LiveRoomParam,
+  TopicFeedParam,
+  UserSpaceParam
+} from './RouteParams';
 
 // Tab 配置：标签名称和系统图标资源
 const TAB_LABELS: string[] = ['首页', '搜索', '动态', '我的'];
@@ -84,6 +106,82 @@ struct Index {
     } else if (name === RouteNames.SEARCH_RESULT) {
       NavDestination() {
         SearchResultPage({ keyword: param as string })
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.LIVE) {
+      NavDestination() {
+        LivePage()
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.LIVE_ROOM) {
+      NavDestination() {
+        LiveRoomPage({ roomId: (param as LiveRoomParam).roomId, title: (param as LiveRoomParam).title })
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.FAVORITES) {
+      NavDestination() {
+        FavoritesPage()
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.FAVORITE_DETAIL) {
+      NavDestination() {
+        FavoriteDetailPage({
+          mediaId: (param as FavoriteDetailParam).mediaId,
+          title: (param as FavoriteDetailParam).title
+        })
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.HISTORY) {
+      NavDestination() {
+        HistoryPage()
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.WATCH_LATER) {
+      NavDestination() {
+        WatchLaterPage()
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.USER_SPACE) {
+      NavDestination() {
+        UserSpacePage({ mid: (param as UserSpaceParam).mid })
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.DYNAMIC_DETAIL) {
+      NavDestination() {
+        DynamicDetailPage({ dynId: (param as DynamicDetailParam).id })
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.PUBLISH_DYNAMIC) {
+      NavDestination() {
+        PublishDynamicPage()
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.TOPIC) {
+      NavDestination() {
+        TopicPage()
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.TOPIC_FEED) {
+      NavDestination() {
+        TopicFeedPage({
+          topicId: (param as TopicFeedParam).topicId,
+          topicName: (param as TopicFeedParam).topicName
+        })
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.BANGUMI) {
+      NavDestination() {
+        BangumiPage()
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.BANGUMI_DETAIL) {
+      NavDestination() {
+        BangumiDetailPage({ seasonId: (param as BangumiDetailParam).seasonId })
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.MUSIC) {
+      NavDestination() {
+        MusicPage()
       }
       .hideTitleBar(true)
     }

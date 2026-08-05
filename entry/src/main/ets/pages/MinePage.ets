@@ -135,6 +135,41 @@ export struct MinePage {
           .alignItems(HorizontalAlign.Start)
         }
 
+        // P2 功能入口（直播/番剧/音乐/收藏/历史/稍后再看/发布动态/话题广场）
+        Column({ space: 6 }) {
+          Text('功能')
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(AppColors.TEXT_SECONDARY)
+            .width('100%')
+          Grid() {
+            ForEach(FEATURE_ENTRIES, (entry: MineFeatureEntry) => {
+              GridItem() {
+                Column({ space: 4 }) {
+                  Text(entry.icon)
+                    .fontSize(22)
+                  Text(entry.label)
+                    .fontSize(12)
+                    .fontColor(AppColors.TEXT_PRIMARY)
+                }
+                .width('100%')
+                .padding({ top: 14, bottom: 14 })
+                .backgroundColor(AppColors.CARD_BG)
+                .borderRadius(10)
+                .onClick(() => {
+                  NavService.push(entry.route, entry.param);
+                })
+              }
+            }, (entry: MineFeatureEntry) => entry.route)
+          }
+          .columnsTemplate('1fr 1fr 1fr 1fr')
+          .columnsGap(8)
+          .rowsGap(8)
+          .width('100%')
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+
         Text('OHB · 鸿蒙第三方 Bilibili 客户端 V1')
           .fontSize(11)
           .fontColor(AppColors.TEXT_SECONDARY)
@@ -150,3 +185,22 @@ export struct MinePage {
     .backgroundColor(AppColors.PAGE_BG)
   }
 }
+
+/** 我的页功能入口 */
+interface MineFeatureEntry {
+  label: string;
+  icon: string;
+  route: string;
+  param?: Object;
+}
+
+const FEATURE_ENTRIES: MineFeatureEntry[] = [
+  { label: '直播', icon: '📺', route: RouteNames.LIVE },
+  { label: '番剧', icon: '🎬', route: RouteNames.BANGUMI },
+  { label: '音乐', icon: '🎵', route: RouteNames.MUSIC },
+  { label: '收藏', icon: '⭐', route: RouteNames.FAVORITES },
+  { label: '历史', icon: '🕘', route: RouteNames.HISTORY },
+  { label: '稍后再看', icon: '▶️', route: RouteNames.WATCH_LATER },
+  { label: '发布动态', icon: '✏️', route: RouteNames.PUBLISH_DYNAMIC },
+  { label: '话题广场', icon: '🏷️', route: RouteNames.TOPIC }
+];

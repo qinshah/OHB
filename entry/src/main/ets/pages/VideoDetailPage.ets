@@ -7,6 +7,12 @@ import { PlayerControllerHolder } from '../player/PlayerControllerHolder';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
 import { PlayerControlView } from './components/PlayerControlView';
+import { CommentSection } from './components/CommentSection';
+import { CommentViewModel } from '../viewmodel/CommentViewModel';
+import { VideoCard } from '../models/VideoCard';
+import { VideoCardView } from '../common/components/VideoCardView';
+import { common } from '@kit.AbilityKit';
+import { UserSpaceParam } from './RouteParams';
 import { RouteNames } from './RouteNames';
 
 /**
@@ -41,6 +47,10 @@ export struct VideoDetailPage {
   private xcController: XComponentController = new XComponentController();
   /** 是否经历过全屏（用于退出后重建 surface） */
   private wasInFullscreen: boolean = false;
+  /** 评论 ViewModel（type=1 视频评论） */
+  @State commentVm: CommentViewModel = new CommentViewModel();
+  /** 评论是否已加载 */
+  private commentLoaded: boolean = false;
   /** 全屏状态轮询定时器 */
   private fsPollTimer: number = -1;
   /** 退出全屏后的延迟重建定时器 */
@@ -60,7 +70,12 @@ export struct VideoDetailPage {
     // 轮询全屏状态：进入全屏卸载本页 XComponent，退出全屏延迟重建
     this.startFsPoll();
     if (this.bvid.length > 0) {
-      this.vm.load(this.bvid);
+      this.vm.load(this.bvid).then(() => {
+        const ctx = this.getUIContext().getHostContext();
+        if (ctx !== undefined && this.vm.detail !== null) {
+          this.vm.controller.attachMediaSession(ctx as common.Context, this.vm.detail.title, this.vm.detail.ownerName);
+        }
+      });
     }
   }
 
@@ -68,6 +83,7 @@ export struct VideoDetailPage {
     this.vm.controller.setFullscreenToggle(null);
     this.vm.controller.setAspectRatioReady(null);
     this.vm.controller.setSystemVolumeChange(null);
+    this.vm.controller.detachMediaSession();
     this.cancelRemount();
     if (this.fsPollTimer >= 0) {
       clearInterval(this.fsPollTimer);
@@ -271,21 +287,58 @@ export struct VideoDetailPage {
                 .height(40)
                 .borderRadius(20)
                 .alt($r('app.media.startIcon'))
+                .onClick(() => {
+                  const d = this.vm.detail;
+                  if (d !== null) {
+                    const p: UserSpaceParam = { mid: d.ownerMid };
+                    NavService.push(RouteNames.USER_SPACE, p);
+                  }
+                })
               Text(this.vm.detail.ownerName)
                 .fontSize(15)
                 .fontColor(AppColors.TEXT_PRIMARY)
                 .layoutWeight(1)
-              Text('+ 关注')
-                .fontSize(13)
-                .fontColor(Color.White)
-                .backgroundColor(AppColors.BRAND)
-                .borderRadius(14)
-                .padding({ left: 14, right: 14, top: 5, bottom: 5 })
+                .onClick(() => {
+                  const d = this.vm.detail;
+                  if (d !== null) {
+                    const p: UserSpaceParam = { mid: d.ownerMid };
+                    NavService.push(RouteNames.USER_SPACE, p);
+                  }
+                })
             }
             .width('100%')
             .padding(10)
             .backgroundColor(AppColors.CARD_BG)
             .borderRadius(10)
+
+            // 互动操作栏（P2 Task 13）
+            Row() {
+              this.ActionItem(this.vm.liked ? '❤️' : '🤍', `${this.vm.detail.like}`,
+                this.vm.liked ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
+                  this.vm.like();
+                })
+              this.ActionItem('🪙', `${this.vm.detail.coin}`, this.vm.coined ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
+                this.vm.coin();
+              })
+              this.ActionItem(this.vm.favorited ? '⭐' : '☆', `${this.vm.detail.favorite}`,
+                this.vm.favorited ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
+                  this.vm.favorite(0);
+                })
+              this.ActionItem(this.vm.watchLaterAdded ? '✅' : '⏱️', '稍后再看',
+                this.vm.watchLaterAdded ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
+                  this.vm.addWatchLater();
+                })
+            }
+            .width('100%')
+            .justifyContent(FlexAlign.SpaceAround)
+            .padding({ top: 4, bottom: 4 })
+
+            if (this.vm.actionTip.length > 0) {
+              Text(this.vm.actionTip)
+                .fontSize(12)
+                .fontColor(AppColors.BRAND)
+                .width('100%')
+            }
 
             // 简介
             Column({ space: 4 }) {
@@ -302,14 +355,14 @@ export struct VideoDetailPage {
             .width('100%')
             .alignItems(HorizontalAlign.Start)
 
-            // 分P列表
+            // 分P列表（P2 Task 13：可切换）
             if (this.vm.detail.pages.length > 1) {
               Text(`分P（${this.vm.detail.pages.length}）`)
                 .fontSize(14)
                 .fontWeight(FontWeight.Medium)
                 .fontColor(AppColors.TEXT_PRIMARY)
                 .width('100%')
-              ForEach(this.vm.detail.pages, (p: VideoPageItem) => {
+              ForEach(this.vm.detail.pages, (p: VideoPageItem, index: number) => {
                 Row() {
                   Text(`P${p.page}`)
                     .fontSize(13)
@@ -327,12 +380,63 @@ export struct VideoDetailPage {
                 }
                 .width('100%')
                 .padding({ top: 6, bottom: 6 })
+                .backgroundColor(this.vm.detail!.cid === p.cid ? AppColors.BRAND : Color.Transparent)
+                .borderRadius(8)
+                .onClick(() => {
+                  const d = this.vm.detail;
+                  if (d !== null && d.cid !== p.cid) {
+                    this.vm.switchPage(d.pages[index], index);
+                  }
+                })
               }, (p: VideoPageItem) => `${p.page}`)
             }
 
-            // 占位（V1 不做弹幕/三连/评论/相关）
-            EmptyView({ tip: '弹幕 / 三连 / 评论 / 相关推荐 将在后续版本开放' })
-              .height(120)
+            // 相关视频（P2 Task 13）
+            Text('相关推荐')
+              .fontSize(15)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(AppColors.TEXT_PRIMARY)
+              .width('100%')
+            if (this.vm.relatedState.status === DataStatus.Loading) {
+              LoadingProgress()
+                .width(28)
+                .height(28)
+                .color(AppColors.BRAND)
+                .margin({ top: 8 })
+            } else if (this.vm.relatedState.status === DataStatus.Data) {
+              WaterFlow() {
+                ForEach(this.vm.related, (item: VideoCard) => {
+                  FlowItem() {
+                    VideoCardView({
+                      card: item,
+                      onCardClick: (bvid: string) => {
+                        NavService.push(RouteNames.VIDEO_DETAIL, bvid);
+                      }
+                    })
+                  }
+                }, (item: VideoCard) => item.bvid)
+              }
+              .columnsTemplate('1fr 1fr')
+              .columnsGap(8)
+              .rowsGap(8)
+              .width('100%')
+            }
+
+            // 评论（P2 Task 14）
+            if (!this.commentLoaded) {
+              Text('加载评论…')
+                .fontSize(13)
+                .fontColor(AppColors.TEXT_SECONDARY)
+                .width('100%')
+                .textAlign(TextAlign.Center)
+                .padding(12)
+                .onClick(() => {
+                  this.loadComment();
+                })
+            } else {
+              CommentSection({ vm: this.commentVm })
+                .width('100%')
+            }
           }
           .width('100%')
           .padding(12)
@@ -343,6 +447,29 @@ export struct VideoDetailPage {
     .width('100%')
     .height('100%')
     .backgroundColor(AppColors.PAGE_BG)
+  }
+
+  @Builder
+  ActionItem(icon: string, label: string, color: ResourceColor, onTap: () => void) {
+    Column({ space: 2 }) {
+      Text(icon)
+        .fontSize(18)
+      Text(label)
+        .fontSize(10)
+        .fontColor(color)
+    }
+    .padding({ left: 8, right: 8, top: 6, bottom: 6 })
+    .onClick(() => {
+      onTap();
+    })
+  }
+
+  private loadComment(): void {
+    if (this.commentLoaded || this.vm.detail === null) {
+      return;
+    }
+    this.commentLoaded = true;
+    this.commentVm.init(1, this.vm.detail.aid);
   }
 }
 

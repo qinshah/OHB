@@ -6,6 +6,7 @@ import { DynamicViewModel } from '../viewmodel/DynamicViewModel';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
 import { RouteNames } from './RouteNames';
+import { DynamicDetailParam, UserSpaceParam } from './RouteParams';
 
 /**
  * 动态页（Task 8）：关注动态流，下拉刷新/分页，视频动态跳视频页。
@@ -23,12 +24,34 @@ export struct DynamicPage {
 
   build() {
     Column() {
-      Text('动态')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(AppColors.TEXT_PRIMARY)
-        .width('100%')
-        .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+      Row() {
+        Text('动态')
+          .fontSize(22)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(AppColors.TEXT_PRIMARY)
+        Blank()
+        Text('话题')
+          .fontSize(13)
+          .fontColor(AppColors.TEXT_SECONDARY)
+          .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+          .borderRadius(12)
+          .border({ width: 1, color: AppColors.DIVIDER })
+          .onClick(() => {
+            NavService.push(RouteNames.TOPIC);
+          })
+        Text('发布')
+          .fontSize(13)
+          .fontColor(Color.White)
+          .backgroundColor(AppColors.BRAND)
+          .borderRadius(12)
+          .padding({ left: 12, right: 12, top: 4, bottom: 4 })
+          .margin({ left: 8 })
+          .onClick(() => {
+            NavService.push(RouteNames.PUBLISH_DYNAMIC);
+          })
+      }
+      .width('100%')
+      .padding({ left: 12, right: 12, top: 8, bottom: 8 })
 
       if (this.vm.feedState.status === DataStatus.Loading) {
         LoadingView()
@@ -97,6 +120,10 @@ export struct DynamicPage {
           .height(36)
           .borderRadius(18)
           .alt($r('app.media.startIcon'))
+          .onClick(() => {
+            const p: UserSpaceParam = { mid: item.upMid };
+            NavService.push(RouteNames.USER_SPACE, p);
+          })
         Column({ space: 2 }) {
           Text(item.upName)
             .fontSize(14)
@@ -110,6 +137,10 @@ export struct DynamicPage {
         .layoutWeight(1)
       }
       .width('100%')
+      .onClick(() => {
+        const p: DynamicDetailParam = { id: item.idStr };
+        NavService.push(RouteNames.DYNAMIC_DETAIL, p);
+      })
 
       // 文本内容
       if (item.text.length > 0) {

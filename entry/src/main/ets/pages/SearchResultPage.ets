@@ -8,6 +8,7 @@ import { VideoCardView } from '../common/components/VideoCardView';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
 import { RouteNames } from './RouteNames';
+import { BangumiDetailParam, LiveRoomParam, UserSpaceParam } from './RouteParams';
 
 /** 排序选项 */
 class OrderOption {
@@ -238,6 +239,10 @@ export struct SearchResultPage {
       .padding(12)
       .backgroundColor(AppColors.CARD_BG)
       .borderRadius(8)
+      .onClick(() => {
+        const p: UserSpaceParam = { mid: row.mid };
+        NavService.push(RouteNames.USER_SPACE, p);
+      })
     } else if (row.kind === SearchRowKind.Live) {
       Column({ space: 4 }) {
         Stack({ alignContent: Alignment.BottomEnd }) {
@@ -269,6 +274,10 @@ export struct SearchResultPage {
       .width('100%')
       .alignItems(HorizontalAlign.Start)
       .padding(4)
+      .onClick(() => {
+        const p: LiveRoomParam = { roomId: row.roomid, title: row.title };
+        NavService.push(RouteNames.LIVE_ROOM, p);
+      })
     } else {
       Column({ space: 4 }) {
         if (row.cover.length > 0) {
@@ -301,6 +310,12 @@ export struct SearchResultPage {
       .width('100%')
       .alignItems(HorizontalAlign.Start)
       .padding(4)
+      .onClick(() => {
+        if (row.kind === SearchRowKind.Bangumi && row.mediaId > 0) {
+          const p: BangumiDetailParam = { seasonId: row.mediaId };
+          NavService.push(RouteNames.BANGUMI_DETAIL, p);
+        }
+      })
     }
   }
 
