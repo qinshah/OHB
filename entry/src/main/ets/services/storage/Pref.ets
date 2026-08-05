@@ -17,6 +17,12 @@ interface ExportPayload {
 const SCHEMA_VERSION: number = 1;
 
 /**
+ * 设置项注册表（模块级数组，避免 Pref 类静态初始化期间引用类绑定导致
+ * "Pref is not initialized"（TDZ））。
+ */
+const prefRegistry: PrefItem[] = [];
+
+/**
  * 单个设置项（AP-4 / Task 11）
  * - 含 key 与 default，构造时自动注册到 Pref.prefItems
  * - 自身提供 get/put/delete，内部调用 preferences 实例接口
@@ -28,7 +34,7 @@ export class PrefItem {
   constructor(key: string, def: PrefValue) {
     this.key = key;
     this.def = def;
-    Pref.register(this);
+    prefRegistry.push(this);
   }
 
   get(): PrefValue {
@@ -70,7 +76,9 @@ export class PrefItem {
  */
 export class Pref {
   /** 全部设置项（PrefItem 构造时自动注册） */
-  static readonly prefItems: PrefItem[] = [];
+  static get prefItems(): PrefItem[] {
+    return prefRegistry;
+  }
 
   private static pref: preferences.Preferences | null = null;
 
@@ -103,10 +111,6 @@ export class Pref {
       return;
     }
     Pref.pref = preferences.getPreferencesSync(context, { name: 'ohb_settings' });
-  }
-
-  static register(item: PrefItem): void {
-    Pref.prefItems.push(item);
   }
 
   static storageValue(key: string, def: PrefValue): PrefValue {
