@@ -93,42 +93,42 @@
 - [ ] Checkpoint 62: 弹幕渲染流畅 ≥ 60fps，不阻塞播放
 
 ### 视频详情互动
-- [ ] Checkpoint 63: 三连（点赞/投币/收藏）操作成功，状态实时更新
-- [ ] Checkpoint 64: 一键三连功能正常
-- [ ] Checkpoint 65: 相关视频列表正确
-- [ ] Checkpoint 66: 分P/选集切换正常
-- [ ] Checkpoint 67: 稍后再看添加/移除正常
+- [x] Checkpoint 63: 三连（点赞/投币/收藏）操作成功，状态实时更新
+- [x] Checkpoint 64: 一键三连功能正常
+- [x] Checkpoint 65: 相关视频列表正确
+- [x] Checkpoint 66: 分P/选集切换正常
+- [x] Checkpoint 67: 稍后再看添加/移除正常
 - [ ] Checkpoint 68: AI总结功能正常
 
 ### 评论
-- [ ] Checkpoint 69: 评论列表分页加载
-- [ ] Checkpoint 70: 楼中楼正确展开
-- [ ] Checkpoint 71: 发表评论/回复成功并显示
-- [ ] Checkpoint 72: 评论点赞/点踩/删除正常
+- [x] Checkpoint 69: 评论列表分页加载
+- [x] Checkpoint 70: 楼中楼正确展开
+- [x] Checkpoint 71: 发表评论/回复成功并显示
+- [ ] Checkpoint 72: 评论点赞/点踩/删除正常（点赞已实现；点踩/删除 UI 归属 P3 Task 27）
 - [ ] Checkpoint 73: @功能正常
 
 ### 直播
-- [ ] Checkpoint 74: 直播列表加载，分区筛选正常
-- [ ] Checkpoint 75: 直播流正常播放（经 PlayerController）
-- [ ] Checkpoint 76: WebSocket 弹幕实时收发
+- [x] Checkpoint 74: 直播列表加载，分区筛选正常
+- [x] Checkpoint 75: 直播流正常播放（经 PlayerController）
+- [x] Checkpoint 76: WebSocket 弹幕实时收发
 - [ ] Checkpoint 77: 直播间互动（关注/分享）正常
-- [ ] Checkpoint 78: 直播间屏蔽词管理正常
+- [x] Checkpoint 78: 直播间屏蔽词管理正常
 
 ### 收藏与历史
-- [ ] Checkpoint 79: 收藏夹列表加载
+- [x] Checkpoint 79: 收藏夹列表加载
 - [ ] Checkpoint 80: 创建/编辑/删除/排序收藏夹正常
-- [ ] Checkpoint 81: 收藏内视频列表正确
-- [ ] Checkpoint 82: 稍后再看添加/移除/清空正常
-- [ ] Checkpoint 83: 历史记录加载与删除正常
+- [x] Checkpoint 81: 收藏内视频列表正确
+- [x] Checkpoint 82: 稍后再看添加/移除/清空正常
+- [x] Checkpoint 83: 历史记录加载与删除正常
 
 ### 用户主页与社交
-- [ ] Checkpoint 84: UP 主主页信息正确（头像/昵称/等级/统计）
-- [ ] Checkpoint 85: 视频/动态/收藏 Tab 切换正常
+- [x] Checkpoint 84: UP 主主页信息正确（头像/昵称/等级/统计）
+- [x] Checkpoint 85: 视频/动态/收藏 Tab 切换正常
 - [ ] Checkpoint 86: 关注/取消关注、拉黑/取消拉黑正常
 - [ ] Checkpoint 87: 关注/粉丝列表正确
 
 ### 动态详情与发布
-- [ ] Checkpoint 88: 动态详情正确展示
+- [x] Checkpoint 88: 动态详情正确展示
 - [ ] Checkpoint 89: 动态点赞/评论/转发成功
 - [ ] Checkpoint 90: 发布动态（图文）成功
 
@@ -138,9 +138,9 @@
 - [ ] Checkpoint 93: 系统消息/回复我的/@我的/收到的赞正常
 
 ### 番剧与音乐
-- [ ] Checkpoint 94: 番剧索引/详情/追番/排行正常
-- [ ] Checkpoint 95: 音乐列表加载、播放正常
-- [ ] Checkpoint 96: MediaSession（锁屏控制）正常
+- [x] Checkpoint 94: 番剧索引/详情/追番/排行正常
+- [x] Checkpoint 95: 音乐列表加载、播放正常
+- [x] Checkpoint 96: MediaSession（锁屏控制）正常
 
 ### 沉浸光感（底部导航栏）
 - [x] Checkpoint 97: 底部导航栏沉浸光感效果正确（barFloatingStyle + systemMaterial/ImmersiveMaterial 渲染）

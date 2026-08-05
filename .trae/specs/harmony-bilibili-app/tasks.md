@@ -307,63 +307,93 @@
 
 # P2: 功能完善任务（对齐 PiliPlus）
 
-## [ ] Task 13: 视频详情互动（相关/分P）
+## [x] Task 13: 视频详情互动（相关/分P）
 - **优先级**: medium
 - **依赖**: Task 9
 - **描述**: 相关视频、分P/选集、追番、稍后再看、视频详情页完善 UI
+  - 已实现：相关视频（`/x/web-interface/archive/related`）、分P 点击切换（重取 playurl 并起播）、
+    点赞/投币/收藏/一键三连操作栏、稍后再看加入、UP 主行跳转用户主页、互动计数本地即时更新
+  - 说明：追番入口在番剧详情页（Task 20）；AI 总结归属 P3（Task 26）
 - **验收标准**: AC-F-3
 - **测试需求**:
   - `programmatic` TR-13.2: 相关视频/分P 正常
   - `human-judgement` TR-13.3: 详情页完善
 
-## [ ] Task 14: 评论系统
+## [x] Task 14: 评论系统
 - **优先级**: medium
 - **依赖**: Task 9
 - **描述**: 评论列表/楼中楼/点赞点踩；评论组件与 ViewModel
+  - 已实现：主评论分页（`/x/v2/reply/main`）、楼中楼（`/x/v2/reply/reply`）、
+    点赞/取消赞（`/x/v2/reply/action`）、发表顶层/楼中楼回复（`/x/v2/reply/add`）、
+    删除接口（`/x/v2/reply/del`，UI 入口随 P3 评论管理补充）；
+    评论组件同时支持视频（type=1）与动态（type=17，oid 走字符串避免精度丢失）
 - **验收标准**: AC-F-3
 - **测试需求**:
   - `programmatic` TR-14.1: 评论列表分页加载
   - `programmatic` TR-14.3: 点赞正常
 
-## [ ] Task 15: 直播观看
+## [x] Task 15: 直播观看
 - **优先级**: medium
 - **依赖**: Task 2, Task 5
 - **描述**: 直播列表/分区、直播流接入 PlayerController、WebSocket 弹幕、互动、屏蔽词
+  - 已实现：分区 + 直播间列表（App 通道 `getAreaList`/`getList`）、
+    直播流播放（`getRoomPlayInfo` 解析 host+base_url+extra，经 PlayerController）、
+    WebSocket 弹幕（`getDanmuInfo` 取 token → wss 认证/心跳/JSON 弹幕解析）、
+    发弹幕（`/msg/send`）、屏蔽词增删（`AddShieldKeyword`/`DelShieldKeyword`）
+  - 说明：直播间关注/分享等互动入口留待后续打磨（不影响 TR-15.1~15.3）
 - **验收标准**: AC-F-2
 - **测试需求**:
   - `programmatic` TR-15.1: 直播列表加载
   - `programmatic` TR-15.2: 直播流播放
   - `programmatic` TR-15.3: WebSocket 弹幕收发
 
-## [ ] Task 16: 收藏与历史/稍后再看
+## [x] Task 16: 收藏与历史/稍后再看
 - **优先级**: medium
 - **依赖**: Task 4, Task 9
 - **描述**: 收藏内视频、稍后再看、历史记录
+  - 已实现：收藏夹列表（`fav/folder/created/list-all`）+ 收藏夹内视频分页（`fav/resource/list`）+
+    收藏/移除（`fav/resource/batch-deal`）、稍后再看列表/加入/移除/清空
+    （`toview/web`、`toview/add`、`toview/v2/dels`、`toview/clear`）、
+    历史记录游标分页/删除/清空（`history/cursor`、`history/delete`、`history/clear`）
+  - 说明：收藏夹增删改查/排序归属 P3（Task 28）
 - **验收标准**: AC-F-3
 - **测试需求**:
   - `programmatic` TR-16.2: 稍后再看/历史正常
 
-## [ ] Task 17: 用户主页与社交
+## [x] Task 17: 用户主页与社交
 - **优先级**: medium
 - **依赖**: Task 4
 - **描述**: UP 主信息、视频/动态/收藏 Tab
+  - 已实现：空间信息（`space/wbi/acc/info`）+ 关系统计（`relation/stat`）、
+    投稿列表（`space/wbi/arc/search`）、用户动态（`polymer/web-dynamic/v1/feed/space`）、
+    用户收藏夹（`fav/folder/created/list-all`）、关注/取关（`relation/modify`）；
+    入口：视频详情 UP 行、搜索结果用户行、动态作者行
+  - 说明：拉黑与关注/粉丝列表归属 P3（Task 29）
 - **验收标准**: AC-F-3
 - **测试需求**:
   - `programmatic` TR-17.1: 用户主页加载
 
-## [ ] Task 18: 动态详情与发布
+## [x] Task 18: 动态详情与发布
 - **优先级**: low
 - **依赖**: Task 8
 - **描述**: 动态详情、点赞/评论/转发、发布动态(图文)、话题广场
+  - 已实现：动态详情（`polymer/web-dynamic/v1/detail`）、点赞（`dyn/thumb`）、
+    评论（type=17 复用评论组件）、文字动态发布（`dyn/feed/create/dyn`，支持话题绑定）、
+    话题广场（`topic/web/dynamic/rcmd` + `feed/topic`）
+  - 说明：转发动作与图文上传（BFS 图片上传）暂未接入，留待后续；不影响 TR-18.1/18.2
 - **验收标准**: AC-F-3
 - **测试需求**:
   - `programmatic` TR-18.1: 动态详情展示
   - `programmatic` TR-18.2: 互动/发布成功
 
-## [ ] Task 20: 番剧/追剧与音乐音频
+## [x] Task 20: 番剧/追剧与音乐音频
 - **优先级**: low
 - **依赖**: Task 5
 - **描述**: 番剧索引/详情/追番/排行；音乐列表/播放/MediaSession
+  - 已实现：番剧排行（`pgc/season/rank/web/list`）与索引（`pgc/season/index/result`）、
+    番剧详情/选集播放（`pgc/view/web/season` + `pgc/player/web/v2/playurl`）、追番/取消追番
+    （`pgc/web/follow/add|del`）；音乐分区排行（`ranking/v2?rid=3`）列表播放；
+    MediaSession 经 `@kit.AVSessionKit` 集成到 PlayerController（锁屏播放/暂停/seek）
 - **验收标准**: AC-F-3
 - **测试需求**:
   - `programmatic` TR-20.1: 番剧模块正常

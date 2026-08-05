@@ -71,12 +71,13 @@
 ```
 entry/src/main/ets/
 ├── common/          # 通用：components / constants / navigation / result / state / utils
-├── data/repository/ # Repository（Auth/Video/Search/Dynamic）
+├── data/repository/ # Repository（Auth/Video/Search/Dynamic/Comment/Live/Favorite/History/UserSpace/Bangumi/Music）
 ├── models/          # 数据模型（ArkTS class/interface + JSON 反序列化）
 ├── network/         # HttpClient / BiliApi / WbiSigner / AppSigner / CookieManager / ApiConstants
-├── pages/           # 页面与路由（Index 主框架壳 + NavDestination 子页）
+├── pages/           # 页面与路由（Index 主框架壳 + NavDestination 子页 + RouteParams 对象参数）
+│   └── components/  # 页面级组件（PlayerControlView / CommentSection）
 ├── player/          # IPlayerEngine / AvPlayerEngine / PlayerController / PlayerTypes
-├── services/        # account（AccountManager）、storage（PrefsStorage/SecureStorage）
+├── services/        # account（AccountManager）、storage（PrefsStorage/SecureStorage）、live（LiveDanmakuClient）、media（MediaSessionHelper）
 ├── theme/           # AppTheme（品牌色/断点/栅格）
 └── viewmodel/       # @Observed ViewModel，消费 DataState
 ```
@@ -126,6 +127,13 @@ entry/src/main/ets/
 - 主框架 `pages/Index.ets`：`Navigation`（NavPathStack）+ Tabs（首页/搜索/动态/我的），路由名集中在 `RouteNames.ets`。
 - 二级页面用 `NavDestination` 注册在 `Index.ets` 的 `pageMap` 中。
 - 路由跳转统一走 `NavService`（NavPathStack 不能做状态装饰，直接持有会触发 changed-during-render 白屏）。
+- 带对象参数的路由（如 `userSpace`/`liveRoom`/`favoriteDetail`）必须在 `RouteParams.ets` 声明显式 interface，
+  NavService.push 前用该 interface 构造变量，禁止向 `param?: Object` 直接传对象字面量（arkts-no-untyped-obj-literals）。
+- P2 动态评论 oid 为 18 位字符串（超出 number 精度），评论仓库与 BiliApi 的 `oid` 参数统一使用 `number | string`。
+- 直播弹幕 WebSocket 协议（P2）：`getDanmuInfo` 取 token 与 wss host → 认证包 op=7（protover=1 请求未压缩 JSON）
+  → 30s 心跳 op=2 → 消息 op=5 按 16 字节头拆包解析；发送弹幕走 `/msg/send` 表单 + csrf。
+- MediaSession（P2）统一在 `PlayerController.attachMediaSession` 集成 `@kit.AVSessionKit`（`PLAYBACK_STATE_*` 枚举、
+  `on('seek')` 回调、`AVMetadata.assetId` 必填），失败静默降级，不影响播放。
 
 ## 工作流程
 
