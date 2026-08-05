@@ -40,7 +40,7 @@
 
 - 每个设置项独立 key（`PrefsStorage`），修改只写对应 key，不整体重写。
 - 默认值集中维护（规划中 `SettingDefaults`）。
-- 导出仅含值 ≠ 默认值的项 + `schemaVersion`；导入时缺失 key 重置为默认值。
+- 导出仅含值 ≠ 默认值的项 + `schemaVersion`；导入时只写回文件中存在的键，缺失 key 保留原设置（TR-11.3）。
 - 凭证等敏感数据不进入设置导出。
 
 ### AP-5 多用户与认证
@@ -77,7 +77,7 @@ entry/src/main/ets/
 ├── pages/           # 页面与路由（Index 主框架壳 + NavDestination 子页 + RouteParams 对象参数）
 │   └── components/  # 页面级组件（PlayerControlView / CommentSection）
 ├── player/          # IPlayerEngine / AvPlayerEngine / PlayerController / PlayerTypes
-├── services/        # account（AccountManager）、storage（PrefsStorage/SecureStorage）、live（LiveDanmakuClient）、media（MediaSessionHelper）
+├── services/        # account（AccountManager）、storage（PrefsStorage/SecureStorage/Pref）、live（LiveDanmakuClient）、media（MediaSessionHelper）
 ├── theme/           # AppTheme（品牌色/断点/栅格）
 └── viewmodel/       # @Observed ViewModel，消费 DataState
 ```
@@ -134,6 +134,12 @@ entry/src/main/ets/
   → 30s 心跳 op=2 → 消息 op=5 按 16 字节头拆包解析；发送弹幕走 `/msg/send` 表单 + csrf。
 - MediaSession（P2）统一在 `PlayerController.attachMediaSession` 集成 `@kit.AVSessionKit`（`PLAYBACK_STATE_*` 枚举、
   `on('seek')` 回调、`AVMetadata.assetId` 必填），失败静默降级，不影响播放。
+- 设置中心（Task 11，P1）：`PrefItem`（key/default，构造注册到 `Pref.prefItems`）自身提供 get/put/delete，
+  `Pref` 只提供 static 设置项与 exportJson/importJson/resetAll；导出仅含非默认项 + schemaVersion，
+  导入只写回文件中存在的已知 key（缺失项保留原设置），重置走 preferences clear；
+  设置存储为全局 `ohb_settings`，不包含凭证（AP-4/AP-5 敏感数据隔离）。
+- 设置与功能联动约定：搜索历史开关在 `SearchRepository` 生效，默认清晰度/倍速在 `VideoDetailViewModel` 加载时生效，
+  隐私过滤（屏蔽词/黑名单/低赞比）由 `VideoRepository.applyFilter` 消费；新增设置项需同步注册到 `Pref` 静态字段。
 
 ## 工作流程
 

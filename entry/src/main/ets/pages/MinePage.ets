@@ -170,6 +170,24 @@ export struct MinePage {
         .width('100%')
         .alignItems(HorizontalAlign.Start)
 
+        // 设置入口
+        Row() {
+          Text('设置')
+            .fontSize(14)
+            .fontColor(AppColors.TEXT_PRIMARY)
+          Blank()
+          Text('›')
+            .fontSize(20)
+            .fontColor(AppColors.TEXT_SECONDARY)
+        }
+        .width('100%')
+        .padding(14)
+        .backgroundColor(AppColors.CARD_BG)
+        .borderRadius(10)
+        .onClick(() => {
+          NavService.push(RouteNames.SETTINGS);
+        })
+
         Text('OHB · 鸿蒙第三方 Bilibili 客户端 V1')
           .fontSize(11)
           .fontColor(AppColors.TEXT_SECONDARY)

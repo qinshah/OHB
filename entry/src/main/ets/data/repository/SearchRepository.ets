@@ -3,6 +3,7 @@ import { BiliApi } from '../../network/BiliApi';
 import { VideoCard } from '../../models/VideoCard';
 import { HotSearchItem, SearchPage, SearchRow, SearchRowKind, SearchType, SuggestResult } from '../../models/SearchModels';
 import { PrefsStorage } from '../../services/storage/PrefsStorage';
+import { Pref } from '../../services/storage/Pref';
 import { common } from '@kit.AbilityKit';
 
 interface RawSuggestTag {
@@ -188,6 +189,9 @@ export class SearchRepository {
   // ---------- 搜索历史（本地持久化） ----------
 
   getHistory(): string[] {
+    if (!Pref.SEARCH_HISTORY_ENABLED.getBool()) {
+      return [];
+    }
     if (this.prefs === null) {
       return [];
     }
@@ -200,6 +204,9 @@ export class SearchRepository {
   }
 
   addHistory(keyword: string): void {
+    if (!Pref.SEARCH_HISTORY_ENABLED.getBool()) {
+      return;
+    }
     if (this.prefs === null || keyword.trim().length === 0) {
       return;
     }

@@ -4,6 +4,7 @@ export class RouteNames {
   static readonly VIDEO_FULLSCREEN: string = 'videoFullscreen';
   static readonly LOGIN: string = 'login';
   static readonly SEARCH_RESULT: string = 'searchResult';
+  static readonly SETTINGS: string = 'settings';
   static readonly LIVE: string = 'live';
   static readonly LIVE_ROOM: string = 'liveRoom';
   static readonly FAVORITES: string = 'favorites';

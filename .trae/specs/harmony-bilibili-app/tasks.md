@@ -268,7 +268,7 @@
 
 # P1: 架构达标任务
 
-## [ ] Task 11: 设置中心与导入导出
+## [x] Task 11: 设置中心与导入导出
 - **优先级**: medium
 - **依赖**: Task 1
 - **描述**:
@@ -280,6 +280,12 @@
   - **重置**：调用 preferences 实例的接口清除所有设置
   - 设置页 UI（播放/外观/搜索/隐私/关于/日志）
   - 导入导出 UI（文件选择/分享）
+  - 已实现：`PrefItem`（key/default，构造注册，get/put/delete 委托 preferences）、
+    `Pref`（static 设置项 + 导出/导入/重置）；导出= getAllSync 过滤非默认项 + schemaVersion；
+    导入= 仅写回文件中存在的已知 key（缺失项保留原设置）；重置= preferences.clear；
+    设置页含播放（清晰度/倍速/自动连播/弹幕）、外观（深色模式即时生效）、搜索（历史开关联动 SearchRepository）、
+    隐私（屏蔽关键词/黑名单 UP/低赞比联动 VideoRepository 过滤）、日志、关于（版本）；
+    导入导出走 `DocumentViewPicker` 选择/保存 JSON 文件；默认清晰度/倍速在视频详情加载时实际生效
 - **验收标准**: AC-A-2, AC-A-3
 - **测试需求**:
   - `programmatic` TR-11.1: 各设置独立存取

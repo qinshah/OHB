@@ -22,6 +22,7 @@ import { TopicFeedPage } from './TopicFeedPage';
 import { BangumiPage } from './BangumiPage';
 import { BangumiDetailPage } from './BangumiDetailPage';
 import { MusicPage } from './MusicPage';
+import { SettingsPage } from './SettingsPage';
 import { AppColors } from '../theme/AppTheme';
 import { RouteNames } from './RouteNames';
 import { NavService } from '../common/navigation/NavService';
@@ -182,6 +183,11 @@ struct Index {
     } else if (name === RouteNames.MUSIC) {
       NavDestination() {
         MusicPage()
+      }
+      .hideTitleBar(true)
+    } else if (name === RouteNames.SETTINGS) {
+      NavDestination() {
+        SettingsPage()
       }
       .hideTitleBar(true)
     }

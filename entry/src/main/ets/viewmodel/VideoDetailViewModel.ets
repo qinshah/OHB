@@ -5,6 +5,7 @@ import { PlayUrlInfo } from '../models/PlayUrlInfo';
 import { VideoCard } from '../models/VideoCard';
 import { VideoRepository } from '../data/repository/VideoRepository';
 import { PlayerController } from '../player/PlayerController';
+import { Pref } from '../services/storage/Pref';
 
 /**
  * 视频详情 ViewModel（Task 9）：详情 + 播放地址加载，持有并驱动 PlayerController。
@@ -189,7 +190,8 @@ export class VideoDetailViewModel {
       this.playError = '缺少 cid，无法获取播放地址';
       return;
     }
-    const r = await this.repo.getPlayUrl(bvid, cid);
+    const qn = Pref.DEFAULT_QUALITY.getNumber();
+    const r = await this.repo.getPlayUrl(bvid, cid, qn);
     if (seq !== this.loadSeq) {
       return;
     }
@@ -199,6 +201,11 @@ export class VideoDetailViewModel {
     }
     this.playUrlInfo = r.value;
     await this.controller.load(this.playUrlInfo.url, PlayerController.defaultHeaders());
+    // 应用默认倍速（设置中心，AP-4）
+    const speed = Pref.DEFAULT_SPEED.getNumber();
+    if (speed !== 1) {
+      await this.controller.setSpeed(speed);
+    }
   }
 
   /** 重试播放地址 */

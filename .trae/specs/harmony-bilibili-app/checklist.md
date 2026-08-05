@@ -55,11 +55,11 @@
 - [ ] Checkpoint 36: 内核可替换——新增 mpv/mdk 仅需实现接口，UI/Controller 无需改动
 
 ### 设置导入导出
-- [ ] Checkpoint 37: `PrefItem` 类含 `key` 和 `default` 属性，构造函数自动向 `prefItems` 添加 this
-- [ ] Checkpoint 38: `PrefItem` 自身提供 `get`、`put`、`delete` 方法，内部调用 preferences 实例接口
-- [ ] Checkpoint 39: `Pref` 类不提供 get/put/delete，只提供 static `PrefItem` 实例及导入、导出、重置接口
-- [ ] Checkpoint 40: 导出直接调用 preferences 的 `getAll` 转 JSON；导入从 JSON 取键值对 `put` 回 preferences，缺失项不管
-- [ ] Checkpoint 41: 导入导出 UI（文件选择/分享）可用
+- [x] Checkpoint 37: `PrefItem` 类含 `key` 和 `default` 属性，构造函数自动向 `prefItems` 添加 this
+- [x] Checkpoint 38: `PrefItem` 自身提供 `get`、`put`、`delete` 方法，内部调用 preferences 实例接口
+- [x] Checkpoint 39: `Pref` 类不提供 get/put/delete，只提供 static `PrefItem` 实例及导入、导出、重置接口
+- [x] Checkpoint 40: 导出直接调用 preferences 的 `getAll` 转 JSON；导入从 JSON 取键值对 `put` 回 preferences，缺失项不管
+- [x] Checkpoint 41: 导入导出 UI（文件选择/分享）可用
 
 ### 多设备适配
 - [ ] Checkpoint 42: 基于 Navigation 单栏/分栏自动切换（手机单栏、平板/折叠屏分栏）
