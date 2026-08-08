@@ -190,7 +190,7 @@ export class VideoDetailViewModel {
       this.playError = '缺少 cid，无法获取播放地址';
       return;
     }
-    const qn = Pref.DEFAULT_QUALITY.getNumber();
+    const qn = Pref.DEFAULT_QUALITY.get();
     const r = await this.repo.getPlayUrl(bvid, cid, qn);
     if (seq !== this.loadSeq) {
       return;
@@ -202,7 +202,7 @@ export class VideoDetailViewModel {
     this.playUrlInfo = r.value;
     await this.controller.load(this.playUrlInfo.url, PlayerController.defaultHeaders());
     // 应用默认倍速（设置中心，AP-4）
-    const speed = Pref.DEFAULT_SPEED.getNumber();
+    const speed = Pref.DEFAULT_SPEED.get();
     if (speed !== 1) {
       await this.controller.setSpeed(speed);
     }

@@ -15,7 +15,6 @@ export class SettingsViewModel {
   appVersion: string = '1.0.0';
 
   init(context: common.Context): void {
-    Pref.init(context);
     this.loadVersion();
   }
 
@@ -32,7 +31,7 @@ export class SettingsViewModel {
   // ---------- 播放 ----------
 
   get defaultQuality(): number {
-    return Pref.DEFAULT_QUALITY.getNumber();
+    return Pref.DEFAULT_QUALITY.get();
   }
 
   setDefaultQuality(qn: number): void {
@@ -40,7 +39,7 @@ export class SettingsViewModel {
   }
 
   get defaultSpeed(): number {
-    return Pref.DEFAULT_SPEED.getNumber();
+    return Pref.DEFAULT_SPEED.get();
   }
 
   setDefaultSpeed(speed: number): void {
@@ -48,7 +47,7 @@ export class SettingsViewModel {
   }
 
   get autoPlayNext(): boolean {
-    return Pref.AUTO_PLAY_NEXT.getBool();
+    return Pref.AUTO_PLAY_NEXT.get();
   }
 
   setAutoPlayNext(enabled: boolean): void {
@@ -56,7 +55,7 @@ export class SettingsViewModel {
   }
 
   get danmakuEnabled(): boolean {
-    return Pref.DANMAKU_ENABLED.getBool();
+    return Pref.DANMAKU_ENABLED.get();
   }
 
   setDanmakuEnabled(enabled: boolean): void {
@@ -66,7 +65,7 @@ export class SettingsViewModel {
   // ---------- 外观 ----------
 
   get darkMode(): string {
-    return Pref.DARK_MODE.getString();
+    return Pref.DARK_MODE.get();
   }
 
   /** 切换深色模式并立即应用（system/light/dark） */
@@ -93,7 +92,7 @@ export class SettingsViewModel {
   // ---------- 搜索 ----------
 
   get searchHistoryEnabled(): boolean {
-    return Pref.SEARCH_HISTORY_ENABLED.getBool();
+    return Pref.SEARCH_HISTORY_ENABLED.get();
   }
 
   setSearchHistoryEnabled(enabled: boolean): void {
@@ -103,7 +102,7 @@ export class SettingsViewModel {
   // ---------- 隐私与过滤 ----------
 
   get filterKeywords(): string {
-    return Pref.FILTER_KEYWORDS.getString();
+    return Pref.FILTER_KEYWORDS.get();
   }
 
   setFilterKeywords(value: string): void {
@@ -111,7 +110,7 @@ export class SettingsViewModel {
   }
 
   get filterBlackMids(): string {
-    return Pref.FILTER_BLACK_MIDS.getString();
+    return Pref.FILTER_BLACK_MIDS.get();
   }
 
   setFilterBlackMids(value: string): void {
@@ -119,7 +118,7 @@ export class SettingsViewModel {
   }
 
   get filterMinLikeRatio(): number {
-    return Pref.FILTER_MIN_LIKE_RATIO.getNumber();
+    return Pref.FILTER_MIN_LIKE_RATIO.get();
   }
 
   setFilterMinLikeRatio(value: number): void {
@@ -129,7 +128,7 @@ export class SettingsViewModel {
   // ---------- 日志 ----------
 
   get logEnabled(): boolean {
-    return Pref.LOG_ENABLED.getBool();
+    return Pref.LOG_ENABLED.get();
   }
 
   setLogEnabled(enabled: boolean): void {
@@ -144,8 +143,8 @@ export class SettingsViewModel {
   }
 
   /** 导入：解析 JSON 并写回 */
-  importJson(json: string): Result<boolean> {
-    return Pref.importJson(json);
+  async importJson(json: string): Promise<Result<boolean>> {
+    return await Pref.importJson(json);
   }
 
   /** 重置全部设置 */

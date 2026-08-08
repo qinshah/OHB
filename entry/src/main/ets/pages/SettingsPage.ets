@@ -55,7 +55,6 @@ interface DarkOption {
 @Component
 export struct SettingsPage {
   @State vm: SettingsViewModel = new SettingsViewModel();
-
   // 选择器/输入框本地镜像
   @State qualityIndex: number = 0;
   @State speedIndex: number = 0;
@@ -68,7 +67,6 @@ export struct SettingsPage {
   @State blackMidsText: string = '';
   @State minLikeRatio: number = 0;
   @State busy: boolean = false;
-
   private context: common.Context | undefined = undefined;
 
   aboutToAppear(): void {
@@ -137,7 +135,12 @@ export struct SettingsPage {
           .layoutWeight(1)
       }
       .width('100%')
-      .padding({ left: 8, right: 12, top: 8, bottom: 4 })
+      .padding({
+        left: 8,
+        right: 12,
+        top: 8,
+        bottom: 4
+      })
 
       Scroll() {
         Column({ space: 10 }) {
@@ -254,6 +257,7 @@ export struct SettingsPage {
                 .fontColor(AppColors.BRAND)
             }
             .width('100%')
+
             Slider({
               value: this.minLikeRatio,
               min: 0,
@@ -331,7 +335,12 @@ export struct SettingsPage {
       .fontColor(Color.White)
       .backgroundColor(AppColors.BRAND)
       .borderRadius(16)
-      .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+      .padding({
+        left: 16,
+        right: 16,
+        top: 8,
+        bottom: 8
+      })
       .onClick(() => {
         onTap();
       })
@@ -430,7 +439,7 @@ export struct SettingsPage {
       fileIo.closeSync(file);
       const decoder = new util.TextDecoder('utf-8');
       const json = decoder.decodeToString(new Uint8Array(buffer));
-      const r = this.vm.importJson(json);
+      const r = await this.vm.importJson(json);
       if (r.isOk) {
         this.vm.tipText = '设置导入成功（缺失项保留原设置）';
         this.syncFromVm();
