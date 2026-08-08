@@ -409,7 +409,8 @@ export struct SettingsPage {
         return;
       }
       const json = this.vm.exportJson();
-      const file = fileIo.openSync(uris[0], fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
+      const file =
+        fileIo.openSync(uris[0], fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE || fileIo.OpenMode.TRUNC);
       fileIo.writeSync(file.fd, json);
       fileIo.closeSync(file);
       this.vm.tipText = '设置已导出（仅含非默认项）';
