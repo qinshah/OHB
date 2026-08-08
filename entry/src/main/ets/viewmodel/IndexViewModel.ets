@@ -21,10 +21,10 @@ export class IndexViewModel {
     return 2;
   }
   onScroll = (offset: number, state: ScrollState) => {
-    if (offset < 0 && this.hidden) {
+    if (offset < -2 && this.hidden) {
       this.cntlr.applyShowAnimation(HdsAnimationMode.SCROLL_ANIMATION)
       this.hidden = false
-    } else if (offset > 0 && !this.hidden) {
+    } else if (offset > 2 && !this.hidden) {
       this.cntlr.applyHideAnimation(HdsAnimationMode.SCROLL_ANIMATION)
       this.hidden = true
     }

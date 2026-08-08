@@ -90,6 +90,7 @@ export struct HomePage {
               }
             }, (item: VideoCard, index: number) => `${item.bvid}_${index}`)
           }
+          .scrollBar(BarState.Off)
           .onDidScroll(IndexViewModel.instance.onScroll)
           .lanes(this.indexVm.gridColumns())
           .width('100%')
