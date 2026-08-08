@@ -7,6 +7,7 @@ import { EmptyView, ErrorView, LoadingView } from '../common/components/StateVie
 import { AppColors } from '../theme/AppTheme';
 import { RouteNames } from './RouteNames';
 import { DynamicDetailParam, UserSpaceParam } from './RouteParams';
+import { IndexViewModel } from '../viewmodel/IndexViewModel';
 
 /**
  * 动态页（Task 8）：关注动态流，下拉刷新/分页，视频动态跳视频页。
@@ -33,7 +34,12 @@ export struct DynamicPage {
         Text('话题')
           .fontSize(13)
           .fontColor(AppColors.TEXT_SECONDARY)
-          .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+          .padding({
+            left: 10,
+            right: 10,
+            top: 4,
+            bottom: 4
+          })
           .borderRadius(12)
           .border({ width: 1, color: AppColors.DIVIDER })
           .onClick(() => {
@@ -44,14 +50,24 @@ export struct DynamicPage {
           .fontColor(Color.White)
           .backgroundColor(AppColors.BRAND)
           .borderRadius(12)
-          .padding({ left: 12, right: 12, top: 4, bottom: 4 })
+          .padding({
+            left: 12,
+            right: 12,
+            top: 4,
+            bottom: 4
+          })
           .margin({ left: 8 })
           .onClick(() => {
             NavService.push(RouteNames.PUBLISH_DYNAMIC);
           })
       }
       .width('100%')
-      .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+      .padding({
+        left: 12,
+        right: 12,
+        top: 8,
+        bottom: 8
+      })
 
       if (this.vm.feedState.status === DataStatus.Loading) {
         LoadingView()
@@ -91,7 +107,10 @@ export struct DynamicPage {
               }
             }, (item: DynamicItem) => item.idStr)
           }
-          .padding(8)
+          .onDidScroll(IndexViewModel.instance.onScroll)
+          .padding({ left: 8, right: 8 })
+          .width('100%')
+          .height('100%')
           .onReachEnd(() => {
             this.vm.loadMore();
           })
@@ -168,10 +187,16 @@ export struct DynamicPage {
                 .fontColor(Color.White)
                 .backgroundColor('#99000000')
                 .borderRadius(4)
-                .padding({ left: 4, right: 4, top: 1, bottom: 1 })
+                .padding({
+                  left: 4,
+                  right: 4,
+                  top: 1,
+                  bottom: 1
+                })
                 .margin({ right: 6, bottom: 6 })
             }
           }
+
           Text(item.videoTitle)
             .fontSize(13)
             .fontColor(AppColors.TEXT_PRIMARY)

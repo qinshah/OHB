@@ -32,20 +32,3 @@ export class AppColors {
     }
   }
 }
-
-/** 响应式断点（vp） */
-export class Breakpoints {
-  static readonly SM: number = 600;
-  static readonly MD: number = 840;
-}
-
-/** 网格列数（手机 2 / 折叠展开 3 / 平板 4） */
-export function gridColumns(widthVp: number): number {
-  if (widthVp >= Breakpoints.MD) {
-    return 4;
-  }
-  if (widthVp >= Breakpoints.SM) {
-    return 3;
-  }
-  return 2;
-}

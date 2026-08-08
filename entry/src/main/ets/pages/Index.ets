@@ -1,4 +1,4 @@
-import { HdsNavigation, HdsTabs, HdsTabsController, hdsMaterial } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsTabs, HdsTabsController, hdsMaterial, HdsAnimationMode } from '@kit.UIDesignKit';
 import { SymbolGlyphModifier } from '@kit.ArkUI';
 import { HomePage } from './HomePage';
 import { SearchPage } from './SearchPage';
@@ -36,6 +36,7 @@ import {
   UserSpaceParam
 } from './RouteParams';
 import { winUtils } from '../services/appearance/WinUtils';
+import { IndexViewModel } from '../viewmodel/IndexViewModel';
 
 // Tab 配置：标签名称和系统图标资源
 const TAB_LABELS: string[] = ['首页', '搜索', '动态', '我的'];
@@ -59,8 +60,6 @@ interface HdsTabItem {
  *
  * 沉浸光感（API 23+ / HarmonyOS 6.1.0+）：
  * - 使用 HdsNavigation + HdsTabs HDS 组件
- * - barFloatingStyle.systemMaterialEffect 配置 hdsMaterial 自适应沉浸材质
- * - 系统根据设备算力动态调整材质效果，实现性能与显示效果的最佳平衡
  * - barOverlap(true) 让内容延伸至导航栏下方，透过半透明材质显现沉浸效果
  *
  * 参考：https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-hds-component-material
@@ -73,9 +72,8 @@ struct Index {
   @StorageProp(winUtils.topRectHeight) topRectHeight: number = 0
   @StorageProp(winUtils.bottomRectHeight) bottomRectHeight: number = 0
   navStack: NavPathStack = new NavPathStack();
-  @State currentTab: number = 0;
+  @Provide(IndexViewModel.name) vm: IndexViewModel = IndexViewModel.instance;
   private useHdsTabs: boolean = ImmersiveHelper.isHdsSupported;
-  private hdsController: HdsTabsController = new HdsTabsController();
   private hdsTabs: HdsTabItem[] = TAB_LABELS.map((label: string, index: number): HdsTabItem => {
     return {
       label: label,
@@ -212,7 +210,7 @@ struct Index {
   @Builder
   buildHdsNavigation() {
     HdsNavigation(this.navStack) {
-      HdsTabs({ controller: this.hdsController }) {
+      HdsTabs({ controller: this.vm.cntlr }) {
         ForEach(this.hdsTabs, (item: HdsTabItem, index: number) => {
           TabContent() {
             if (index === 0) {
@@ -237,7 +235,10 @@ struct Index {
       .barOverlap(true)
       .barPosition(BarPosition.End)
       .barFloatingStyle({
-        barBottomMargin: this.bottomRectHeight,
+        adaptToHandedness: true,
+        barBottomMargin: this.bottomRectHeight / 2,
+        // lightColor: AppColors.BRAND,
+        gradientMask: { maskColor: Color.Transparent },
         // 沉浸光感：类型 + 等级，系统根据设备算力自适应调整材质效果
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.IMMERSIVE,
@@ -245,12 +246,16 @@ struct Index {
         }
       })
       .onChange((idx: number) => {
-        this.currentTab = idx;
+        this.vm.idx = idx;
       })
     }
+    .onAreaChange((_old: Area, area: Area) => {
+      this.vm.areaWidth = Number(area.width) / 1;
+    })
     .padding({ top: this.topRectHeight })
     .hideTitleBar(true)
     .navDestination(this.pageMap)
+    .mode(NavigationMode.Stack)
   }
 
   /**
@@ -259,7 +264,7 @@ struct Index {
   @Builder
   buildNormalNavigation() {
     Navigation(this.navStack) {
-      Tabs({ barPosition: BarPosition.End, index: this.currentTab }) {
+      Tabs({ barPosition: BarPosition.End, index: this.vm.idx }) {
         TabContent() {
           HomePage()
         }
@@ -283,7 +288,7 @@ struct Index {
       .barHeight('auto')
       .barBackgroundColor(AppColors.CARD_BG)
       .onChange((idx: number) => {
-        this.currentTab = idx;
+        this.vm.idx = idx;
       })
     }
     .hideTitleBar(true)
@@ -296,10 +301,10 @@ struct Index {
     Column({ space: 2 }) {
       SymbolGlyph(TAB_ICONS[index])
         .fontSize(20)
-        .fontColor([this.currentTab === index ? AppColors.BRAND : AppColors.TEXT_SECONDARY])
+        .fontColor([this.vm.idx === index ? AppColors.BRAND : AppColors.TEXT_SECONDARY])
       Text(TAB_LABELS[index])
         .fontSize(10)
-        .fontColor(this.currentTab === index ? AppColors.BRAND : AppColors.TEXT_SECONDARY)
+        .fontColor(this.vm.idx === index ? AppColors.BRAND : AppColors.TEXT_SECONDARY)
     }
   }
 }
