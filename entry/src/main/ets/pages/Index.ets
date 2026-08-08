@@ -35,6 +35,7 @@ import {
   TopicFeedParam,
   UserSpaceParam
 } from './RouteParams';
+import { winUtils } from '../services/appearance/WinUtils';
 
 // Tab 配置：标签名称和系统图标资源
 const TAB_LABELS: string[] = ['首页', '搜索', '动态', '我的'];
@@ -69,6 +70,8 @@ interface HdsTabItem {
 @Entry
 @Component
 struct Index {
+  @StorageProp(winUtils.topRectHeight) topRectHeight: number = 0
+  @StorageProp(winUtils.bottomRectHeight) bottomRectHeight: number = 0
   navStack: NavPathStack = new NavPathStack();
   @State currentTab: number = 0;
   private useHdsTabs: boolean = ImmersiveHelper.isHdsSupported;
@@ -204,7 +207,7 @@ struct Index {
   /**
    * 沉浸光感底部导航栏（API 23+，HarmonyOS 6.1.0+）
    * HdsNavigation + HdsTabs，通过 barFloatingStyle.systemMaterialEffect
-   * 配置 hdsMaterial ADAPTIVE 类型 + ADAPTIVE 等级，系统自适应沉浸材质。
+   * 配置 hdsMaterial 类型 + 等级，系统自适应沉浸材质。
    */
   @Builder
   buildHdsNavigation() {
@@ -222,33 +225,32 @@ struct Index {
               MinePage()
             }
           }
-          .tabBar(new BottomTabBarStyle({
-            normal: item.normalIcon,
-            selected: item.selectedIcon
-          }, item.label)
-            .labelStyle({
-              unselectedColor: AppColors.TEXT_SECONDARY,
-              selectedColor: AppColors.BRAND
-            }))
-        }, (item: HdsTabItem) => item.label)
+          .tabBar(
+            new BottomTabBarStyle({ normal: item.normalIcon, selected: item.selectedIcon }, item.label)
+              .labelStyle({
+                unselectedColor: AppColors.TEXT_SECONDARY,
+                selectedColor: AppColors.BRAND
+              })
+          )
+        }, (item: HdsTabItem) => item.label,)
       }
       .barOverlap(true)
       .barPosition(BarPosition.End)
       .barFloatingStyle({
-        barBottomMargin: 0,
-        // 沉浸光感：ADAPTIVE 类型 + ADAPTIVE 等级，系统根据设备算力自适应调整材质效果
+        barBottomMargin: this.bottomRectHeight,
+        // 沉浸光感：类型 + 等级，系统根据设备算力自适应调整材质效果
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+          materialType: hdsMaterial.MaterialType.IMMERSIVE,
+          materialLevel: hdsMaterial.MaterialLevel.EXQUISITE
         }
       })
       .onChange((idx: number) => {
         this.currentTab = idx;
       })
     }
+    .padding({ top: this.topRectHeight })
     .hideTitleBar(true)
     .navDestination(this.pageMap)
-    .mode(NavigationMode.Stack)
   }
 
   /**

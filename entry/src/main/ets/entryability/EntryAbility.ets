@@ -5,6 +5,7 @@ import { AccountManager } from '../services/account/AccountManager';
 import { Pref } from '../services/storage/Pref';
 import { DisplayHelper } from '../common/utils/DisplayHelper';
 import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
+import { WinUtils } from '../services/appearance/WinUtils';
 
 const DOMAIN = 0x0000;
 
@@ -42,6 +43,7 @@ export default class EntryAbility extends UIAbility {
         return;
       }
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+      WinUtils.init(windowStage)
     });
   }
 
