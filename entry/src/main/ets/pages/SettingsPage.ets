@@ -1,9 +1,13 @@
 import { NavService } from '../common/navigation/NavService';
-import { SettingsViewModel } from '../viewmodel/SettingsViewModel';
 import { AppColors } from '../theme/AppTheme';
-import { picker, fileIo } from '@kit.CoreFileKit';
+import { common, ConfigurationConstant, bundleManager } from '@kit.AbilityKit';
+import { systemShare } from '@kit.ShareKit';
+import { uniformTypeDescriptor as utd } from '@kit.ArkData';
 import { util } from '@kit.ArkTS';
-import { common } from '@kit.AbilityKit';
+import { fileIo, fileUri, picker } from '@kit.CoreFileKit';
+import { Pref } from '../services/storage/Pref';
+import { Result } from '../common/result/Result';
+import { AppError } from '../common/result/AppError';
 
 /** 清晰度选项 */
 const QUALITY_OPTIONS: QualityOption[] = [
@@ -54,8 +58,7 @@ interface DarkOption {
  */
 @Component
 export struct SettingsPage {
-  @State vm: SettingsViewModel = new SettingsViewModel();
-  // 选择器/输入框本地镜像
+  // 选择器/输入框本地镜像（直接从 Pref 读取初始值）
   @State qualityIndex: number = 0;
   @State speedIndex: number = 0;
   @State darkIndex: number = 0;
@@ -66,28 +69,38 @@ export struct SettingsPage {
   @State keywordsText: string = '';
   @State blackMidsText: string = '';
   @State minLikeRatio: number = 0;
-  @State busy: boolean = false;
+  @State tipText: string = '';
+  @State appVersion: string = '1.0.0';
   private context: common.Context | undefined = undefined;
 
   aboutToAppear(): void {
     this.context = this.getUIContext().getHostContext();
-    if (this.context !== undefined) {
-      this.vm.init(this.context);
-    }
-    this.syncFromVm();
+    this.loadVersion();
+    this.syncFromPref();
   }
 
-  private syncFromVm(): void {
-    this.qualityIndex = this.indexOfQuality(this.vm.defaultQuality);
-    this.speedIndex = this.indexOfSpeed(this.vm.defaultSpeed);
-    this.darkIndex = this.indexOfDark(this.vm.darkMode);
-    this.autoPlay = this.vm.autoPlayNext;
-    this.danmakuOn = this.vm.danmakuEnabled;
-    this.searchHistoryOn = this.vm.searchHistoryEnabled;
-    this.logOn = this.vm.logEnabled;
-    this.keywordsText = this.vm.filterKeywords;
-    this.blackMidsText = this.vm.filterBlackMids;
-    this.minLikeRatio = this.vm.filterMinLikeRatio;
+  /** 读取应用版本 */
+  private async loadVersion(): Promise<void> {
+    try {
+      const info = await bundleManager.getBundleInfoForSelf(bundleManager.BundleFlag.GET_BUNDLE_INFO_DEFAULT);
+      this.appVersion = `${info.versionName} (${info.versionCode})`;
+    } catch (e) {
+      this.appVersion = '1.0.0';
+    }
+  }
+
+  /** 从 Pref 同步所有设置到本地 @State */
+  private syncFromPref(): void {
+    this.qualityIndex = this.indexOfQuality(Pref.DEFAULT_QUALITY.get());
+    this.speedIndex = this.indexOfSpeed(Pref.DEFAULT_SPEED.get());
+    this.darkIndex = this.indexOfDark(Pref.DARK_MODE.get());
+    this.autoPlay = Pref.AUTO_PLAY_NEXT.get();
+    this.danmakuOn = Pref.DANMAKU_ENABLED.get();
+    this.searchHistoryOn = Pref.SEARCH_HISTORY_ENABLED.get();
+    this.logOn = Pref.LOG_ENABLED.get();
+    this.keywordsText = Pref.FILTER_KEYWORDS.get();
+    this.blackMidsText = Pref.FILTER_BLACK_MIDS.get();
+    this.minLikeRatio = Pref.FILTER_MIN_LIKE_RATIO.get();
   }
 
   private indexOfQuality(qn: number): number {
@@ -115,6 +128,24 @@ export struct SettingsPage {
       }
     }
     return 0;
+  }
+
+  /** 应用深色模式 */
+  private applyDarkMode(mode: string): void {
+    if (this.context === undefined) {
+      return;
+    }
+    try {
+      let cm = ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
+      if (mode === 'light') {
+        cm = ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT;
+      } else if (mode === 'dark') {
+        cm = ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+      }
+      this.context.getApplicationContext().setColorMode(cm);
+    } catch (e) {
+      this.tipText = `应用主题失败：${JSON.stringify(e)}`;
+    }
   }
 
   build() {
@@ -165,20 +196,20 @@ export struct SettingsPage {
           this.SelectRow('默认清晰度', SettingsPage.toSelectOptions(QUALITY_OPTIONS.map((o: QualityOption) => o.label)),
             this.qualityIndex, (idx: number) => {
               this.qualityIndex = idx;
-              this.vm.setDefaultQuality(QUALITY_OPTIONS[idx].value);
+              Pref.DEFAULT_QUALITY.put(QUALITY_OPTIONS[idx].value);
             })
           this.SelectRow('默认倍速', SettingsPage.toSelectOptions(SPEED_OPTIONS.map((o: SpeedOption) => o.label)),
             this.speedIndex, (idx: number) => {
               this.speedIndex = idx;
-              this.vm.setDefaultSpeed(SPEED_OPTIONS[idx].value);
+              Pref.DEFAULT_SPEED.put(SPEED_OPTIONS[idx].value);
             })
           this.ToggleRow('自动连播下一P', this.autoPlay, (on: boolean) => {
             this.autoPlay = on;
-            this.vm.setAutoPlayNext(on);
+            Pref.AUTO_PLAY_NEXT.put(on);
           })
           this.ToggleRow('弹幕开关', this.danmakuOn, (on: boolean) => {
             this.danmakuOn = on;
-            this.vm.setDanmakuEnabled(on);
+            Pref.DANMAKU_ENABLED.put(on);
           })
 
           // 外观
@@ -186,16 +217,16 @@ export struct SettingsPage {
           this.SelectRow('深色模式', SettingsPage.toSelectOptions(DARK_OPTIONS.map((o: DarkOption) => o.label)),
             this.darkIndex, (idx: number) => {
               this.darkIndex = idx;
-              if (this.context !== undefined) {
-                this.vm.setDarkMode(DARK_OPTIONS[idx].value, this.context);
-              }
+              const mode = DARK_OPTIONS[idx].value;
+              Pref.DARK_MODE.put(mode);
+              this.applyDarkMode(mode);
             })
 
           // 搜索
           this.SectionTitle('搜索')
           this.ToggleRow('保存搜索历史', this.searchHistoryOn, (on: boolean) => {
             this.searchHistoryOn = on;
-            this.vm.setSearchHistoryEnabled(on);
+            Pref.SEARCH_HISTORY_ENABLED.put(on);
           })
 
           // 隐私与过滤
@@ -214,7 +245,7 @@ export struct SettingsPage {
               .padding({ left: 12, right: 12 })
               .onChange((v: string) => {
                 this.keywordsText = v;
-                this.vm.setFilterKeywords(v);
+                Pref.FILTER_KEYWORDS.put(v);
               })
           }
           .width('100%')
@@ -224,7 +255,7 @@ export struct SettingsPage {
           .borderRadius(10)
 
           Column({ space: 6 }) {
-            Text('黑名单 UP mid（逗号分隔）')
+            Text('黑名单 up mid（逗号分隔）')
               .fontSize(13)
               .fontColor(AppColors.TEXT_SECONDARY)
               .width('100%')
@@ -237,7 +268,7 @@ export struct SettingsPage {
               .padding({ left: 12, right: 12 })
               .onChange((v: string) => {
                 this.blackMidsText = v;
-                this.vm.setFilterBlackMids(v);
+                Pref.FILTER_BLACK_MIDS.put(v);
               })
           }
           .width('100%')
@@ -267,7 +298,7 @@ export struct SettingsPage {
               .selectedColor(AppColors.BRAND)
               .onChange((value: number) => {
                 this.minLikeRatio = value;
-                this.vm.setFilterMinLikeRatio(value);
+                Pref.FILTER_MIN_LIKE_RATIO.put(value);
               })
           }
           .width('100%')
@@ -280,7 +311,7 @@ export struct SettingsPage {
           this.SectionTitle('日志')
           this.ToggleRow('日志开关', this.logOn, (on: boolean) => {
             this.logOn = on;
-            this.vm.setLogEnabled(on);
+            Pref.LOG_ENABLED.put(on);
           })
 
           // 关于
@@ -290,7 +321,7 @@ export struct SettingsPage {
               .fontSize(13)
               .fontColor(AppColors.TEXT_PRIMARY)
             Blank()
-            Text(this.vm.appVersion)
+            Text(this.appVersion)
               .fontSize(12)
               .fontColor(AppColors.TEXT_SECONDARY)
           }
@@ -299,8 +330,8 @@ export struct SettingsPage {
           .backgroundColor(AppColors.CARD_BG)
           .borderRadius(10)
 
-          if (this.vm.tipText.length > 0) {
-            Text(this.vm.tipText)
+          if (this.tipText.length > 0) {
+            Text(this.tipText)
               .fontSize(12)
               .fontColor(AppColors.BRAND)
               .width('100%')
@@ -396,61 +427,98 @@ export struct SettingsPage {
 
   // ---------- 导入 / 导出 / 重置 ----------
 
+  /** 导出：使用系统分享功能 */
   private async doExport(): Promise<void> {
-    if (this.busy || this.context === undefined) {
+    if (this.context === undefined) {
+      this.tipText = '上下文未初始化';
       return;
     }
-    this.busy = true;
+
     try {
-      const dp = new picker.DocumentViewPicker(this.context);
-      const uris = await dp.save({ newFileNames: ['ohb_settings.json'] });
-      if (uris.length === 0) {
-        this.vm.tipText = '已取消导出';
-        return;
-      }
-      const json = this.vm.exportJson();
-      const file =
-        fileIo.openSync(uris[0], fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE || fileIo.OpenMode.TRUNC);
+      // 生成 JSON 数据
+      const json = Pref.exportJson();
+      
+      // 创建临时文件
+      const tempDir = this.context.cacheDir;
+      const fileName = 'ohb_settings.json';
+      const filePath = `${tempDir}/${fileName}`;
+      
+      // 写入文件
+      const file = fileIo.openSync(filePath, 
+        fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);
       fileIo.writeSync(file.fd, json);
       fileIo.closeSync(file);
-      this.vm.tipText = '设置已导出（仅含非默认项）';
+      
+      // 使用系统分享
+      // 将文件路径转换为 URI
+      const uri = fileUri.getUriFromPath(filePath);
+      
+      // 获取 JSON 文件的 UTD 类型
+      const utdTypeId = utd.getUniformDataTypeByFilenameExtension('.json', utd.UniformDataType.FILE);
+      
+      // 创建分享数据
+      const sharedData = new systemShare.SharedData({
+        utd: utdTypeId,
+        uri: uri
+      });
+      
+      // 创建分享控制器
+      const controller = new systemShare.ShareController(sharedData);
+      
+      // 注册分享面板关闭监听
+      controller.on('dismiss', () => {
+        console.info('分享面板已关闭');
+      });
+      
+      // 显示分享面板
+      controller.show(this.context as common.UIAbilityContext, {
+        previewMode: systemShare.SharePreviewMode.DEFAULT,
+        selectionMode: systemShare.SelectionMode.SINGLE
+      });
+      this.tipText = '设置已导出';
     } catch (e) {
-      this.vm.tipText = `导出失败：${JSON.stringify(e)}`;
-    } finally {
-      this.busy = false;
+      this.tipText = `导出失败：${JSON.stringify(e)}`;
     }
   }
 
+  /** 导入：读取文件并解析 */
   private async doImport(): Promise<void> {
-    if (this.busy || this.context === undefined) {
+    if (this.context === undefined) {
+      this.tipText = '上下文未初始化';
       return;
     }
-    this.busy = true;
+
     try {
-      const dp = new picker.DocumentViewPicker(this.context);
+      // 使用系统文件选择器选择文件
+      const DocumentViewPicker = picker.DocumentViewPicker;
+      const dp = new DocumentViewPicker(this.context);
       const uris = await dp.select({ maxSelectNumber: 1 });
+      
       if (uris.length === 0) {
-        this.vm.tipText = '已取消导入';
+        this.tipText = '已取消导入';
         return;
       }
+
+      // 读取文件内容
       const file = fileIo.openSync(uris[0], fileIo.OpenMode.READ_ONLY);
       const stat = fileIo.statSync(file.fd);
       const buffer = new ArrayBuffer(stat.size);
       fileIo.readSync(file.fd, buffer);
       fileIo.closeSync(file);
+
       const decoder = new util.TextDecoder('utf-8');
       const json = decoder.decodeToString(new Uint8Array(buffer));
-      const r = await this.vm.importJson(json);
+
+      // 导入设置
+      const r = await Pref.importJson(json);
       if (r.isOk) {
-        this.vm.tipText = '设置导入成功（缺失项保留原设置）';
-        this.syncFromVm();
+        this.tipText = '设置导入成功';
+        this.syncFromPref(); // 重新同步 UI
       } else {
-        this.vm.tipText = r.error.message;
+        this.tipText = r.error.message;
       }
     } catch (e) {
-      this.vm.tipText = `导入失败：${JSON.stringify(e)}`;
-    } finally {
-      this.busy = false;
+      this.tipText = `导入失败：${JSON.stringify(e)}`;
     }
   }
 
@@ -466,10 +534,14 @@ export struct SettingsPage {
       secondaryButton: {
         value: '重置',
         fontColor: AppColors.BRAND,
-        action: () => {
-          this.vm.resetAll().then(() => {
-            this.syncFromVm();
-          });
+        action: async () => {
+          const r = await Pref.resetAll();
+          if (r.isOk) {
+            this.tipText = '已重置全部设置';
+            this.syncFromPref(); // 重新同步 UI
+          } else {
+            this.tipText = r.error.message;
+          }
         }
       }
     });
