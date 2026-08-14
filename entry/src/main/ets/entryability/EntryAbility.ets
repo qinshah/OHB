@@ -2,25 +2,19 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { AccountManager } from '../services/account/AccountManager';
-import { Pref } from '../services/storage/Pref';
 import { DisplayHelper } from '../common/utils/DisplayHelper';
 import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
 import { WinUtils } from '../services/appearance/WinUtils';
+import { ContextUtil } from '../common/utils/ContextUtil';
 
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    try {
-      // 深色/浅色跟随系统（AP-6）
-      this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
-    } catch (err) {
-      hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
-    }
+    // 初始化ContextUtil
+    ContextUtil.init(this.context);
     // 初始化多用户与认证框架（Cookie 持久化 + 登录态恢复，AP-5）
     AccountManager.getInstance().init(this.context);
-    // 初始化设置存储（AP-4 / Task 11）
-    Pref.init(this.context);
     // 初始化系统音量调节与监听（AudioKit）
     SystemAudioHelper.init();
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
