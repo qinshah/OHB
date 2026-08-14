@@ -37,12 +37,12 @@ import {
 } from './RouteParams';
 import { winUtils } from '../services/appearance/WinUtils';
 import { IndexViewModel } from '../viewmodel/IndexViewModel';
+import { PlayerController } from '../player/PlayerController';
 
 // Tab 配置：标签名称和系统图标资源
-const TAB_LABELS: string[] = ['首页', '搜索', '动态', '我的'];
+const TAB_LABELS: string[] = ['首页', '动态', '我的'];
 const TAB_ICONS: Resource[] = [
   $r('sys.symbol.house'),
-  $r('sys.symbol.magnifyingglass'),
   $r('sys.symbol.bell'),
   $r('sys.symbol.person')
 ];
@@ -95,9 +95,14 @@ struct Index {
         VideoDetailPage({ bvid: param as string })
       }
       .hideTitleBar(true)
+    } else if (name === RouteNames.SEARCH) {
+      NavDestination() {
+        SearchPage()
+      }
+      .hideTitleBar(true)
     } else if (name === RouteNames.VIDEO_FULLSCREEN) {
       NavDestination() {
-        VideoFullscreenPage()
+        VideoFullscreenPage({ controller: param as PlayerController })
       }
       .hideTitleBar(true)
     } else if (name === RouteNames.LOGIN) {
@@ -216,10 +221,8 @@ struct Index {
             if (index === 0) {
               HomePage()
             } else if (index === 1) {
-              SearchPage()
-            } else if (index === 2) {
               DynamicPage()
-            } else {
+            } else if (index === 2) {
               MinePage()
             }
           }
@@ -271,19 +274,14 @@ struct Index {
         .tabBar(this.tabItemBuilder(0))
 
         TabContent() {
-          SearchPage()
+          DynamicPage()
         }
         .tabBar(this.tabItemBuilder(1))
 
         TabContent() {
-          DynamicPage()
-        }
-        .tabBar(this.tabItemBuilder(2))
-
-        TabContent() {
           MinePage()
         }
-        .tabBar(this.tabItemBuilder(3))
+        .tabBar(this.tabItemBuilder(2))
       }
       .barHeight('auto')
       .barBackgroundColor(AppColors.CARD_BG)

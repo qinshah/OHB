@@ -2,6 +2,7 @@
 export class RouteNames {
   static readonly VIDEO_DETAIL: string = 'videoDetail';
   static readonly VIDEO_FULLSCREEN: string = 'videoFullscreen';
+  static readonly SEARCH: string = 'search';
   static readonly LOGIN: string = 'login';
   static readonly SEARCH_RESULT: string = 'searchResult';
   static readonly SETTINGS: string = 'settings';
