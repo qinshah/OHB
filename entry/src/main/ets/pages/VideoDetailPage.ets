@@ -15,21 +15,23 @@ import { UserSpaceParam } from './RouteParams';
 import { RouteNames } from './RouteNames';
 
 /**
- * 视频详情页（Task 9 重构）：播放器 + 标题 + UP主 + 简介（V1 基础布局）。
+ * 视频详情页（TabView 布局）
+ * - 播放区固定顶部
+ * - 详情头部（标题/UP/互动/简介/分P）固定在 Tabs 上方
+ * - Tabs 切换「推荐」与「评论」
  */
 @Component
 export struct VideoDetailPage {
   @Prop bvid: string = '';
   @State vm: VideoDetailVM = new VideoDetailVM();
   @State descExpanded: boolean = false;
+  @State commentLoaded: boolean = false;
+  @State currentTab: number = 0;
   private xcController: XComponentController = new XComponentController();
   /** 评论 ViewModel（type=1 视频评论） */
   @State commentVm: CommentViewModel = new CommentViewModel();
-  /** 评论是否已加载 */
-  private commentLoaded: boolean = false;
 
   aboutToAppear(): void {
-    // 先经 PlayerRepository 以 bvid 绑定/创建播放器（PlayerControlView、全屏页通过 get(bvid) 共享同一实例）
     this.vm.attachPlayer(this.bvid);
     this.vm.playerVM.attachUIContext(this.getUIContext());
     if (this.bvid.length > 0) {
@@ -53,7 +55,6 @@ export struct VideoDetailPage {
     Column() {
       // ===== 播放区 =====
       Stack() {
-        // 视频
         if (!this.vm.playerVM.fullscreen) {
           XComponent({
             type: XComponentType.SURFACE,
@@ -67,7 +68,7 @@ export struct VideoDetailPage {
             .backgroundColor(Color.Black)
         }
 
-        // 控制层（经 playerId=bvid 从 PlayerRepository 获取同一播放器）
+        // 控制层
         PlayerControlView({ playerId: this.bvid })
           .width('100%')
           .height('100%')
@@ -91,7 +92,7 @@ export struct VideoDetailPage {
           .justifyContent(FlexAlign.Center)
         }
 
-        // 返回键：SDK SymbolGlyph 图标，不用 ‹
+        // 返回键
         Stack() {
           SymbolGlyph($r('sys.symbol.chevron_left'))
             .fontSize(22)
@@ -109,218 +110,287 @@ export struct VideoDetailPage {
         })
       }
       .width('100%')
-      // 视频宽高比未就绪时回退 16:9
       .aspectRatio(this.vm.playerVM.aspectRatio > 0 ? this.vm.playerVM.aspectRatio : 16 / 9)
       .backgroundColor(Color.Black)
 
-      // ===== 详情区 =====
-      if (this.vm.detailState.status === DataStatus.Loading) {
-        LoadingView()
-          .layoutWeight(1)
-      } else if (this.vm.detailState.status === DataStatus.Error) {
-        ErrorView({
-          message: this.vm.detailState.error?.message ?? '详情加载失败',
-          retryable: true,
-          onRetry: () => {
-            this.vm.load(this.bvid);
-          }
-        })
-          .layoutWeight(1)
-      } else if (this.vm.detail !== null) {
-        Scroll() {
-          Column({ space: 12 }) {
-            // 标题 + 播放数据
-            Text(this.vm.detail.title)
-              .fontSize(17)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(AppColors.TEXT_PRIMARY)
-              .width('100%')
-            Row({ space: 12 }) {
-              Text(`${FormatUtils.count(this.vm.detail.view)}播放`)
-                .fontSize(12)
-                .fontColor(AppColors.TEXT_SECONDARY)
-              Text(`${FormatUtils.count(this.vm.detail.danmaku)}弹幕`)
-                .fontSize(12)
-                .fontColor(AppColors.TEXT_SECONDARY)
-              Text(FormatUtils.relativeTime(this.vm.detail.pubdate))
-                .fontSize(12)
-                .fontColor(AppColors.TEXT_SECONDARY)
-              if (this.vm.playUrlInfo !== null) {
-                Text(this.vm.playUrlInfo.qualityDesc)
-                  .fontSize(12)
-                  .fontColor(AppColors.BRAND)
-              }
-            }
-            .width('100%')
-
-            // UP 主行
-            Row({ space: 10 }) {
-              Image(this.vm.detail.ownerFace)
-                .width(40)
-                .height(40)
-                .borderRadius(20)
-                .alt($r('app.media.startIcon'))
-                .onClick(() => {
-                  const d = this.vm.detail;
-                  if (d !== null) {
-                    const p: UserSpaceParam = { mid: d.ownerMid };
-                    NavService.push(RouteNames.USER_SPACE, p);
-                  }
-                })
-              Text(this.vm.detail.ownerName)
-                .fontSize(15)
-                .fontColor(AppColors.TEXT_PRIMARY)
-                .layoutWeight(1)
-                .onClick(() => {
-                  const d = this.vm.detail;
-                  if (d !== null) {
-                    const p: UserSpaceParam = { mid: d.ownerMid };
-                    NavService.push(RouteNames.USER_SPACE, p);
-                  }
-                })
-            }
-            .width('100%')
-            .padding(10)
-            .backgroundColor(AppColors.CARD_BG)
-            .borderRadius(10)
-
-            // 互动操作栏（P2 Task 13）
-            Row() {
-              this.ActionItem(this.vm.liked ? '❤️' : '🤍', `${this.vm.detail.like}`,
-                this.vm.liked ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
-                  this.vm.like();
-                })
-              this.ActionItem('🪙', `${this.vm.detail.coin}`,
-                this.vm.coined ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
-                  this.vm.coin();
-                })
-              this.ActionItem(this.vm.favorited ? '⭐' : '☆', `${this.vm.detail.favorite}`,
-                this.vm.favorited ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
-                  this.vm.favorite(0);
-                })
-              this.ActionItem(this.vm.watchLaterAdded ? '✅' : '⏱️', '稍后再看',
-                this.vm.watchLaterAdded ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
-                  this.vm.addWatchLater();
-                })
-            }
-            .width('100%')
-            .justifyContent(FlexAlign.SpaceAround)
-            .padding({ top: 4, bottom: 4 })
-
-            if (this.vm.actionTip.length > 0) {
-              Text(this.vm.actionTip)
-                .fontSize(12)
-                .fontColor(AppColors.BRAND)
-                .width('100%')
-            }
-
-            // 简介
-            Column({ space: 4 }) {
-              Text(this.vm.detail.desc.length > 0 ? this.vm.detail.desc : '暂无简介')
-                .fontSize(13)
-                .fontColor(AppColors.TEXT_SECONDARY)
-                .width('100%')
-                .maxLines(this.descExpanded ? 100 : 2)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .onClick(() => {
-                  this.descExpanded = !this.descExpanded;
-                })
-            }
-            .width('100%')
-            .alignItems(HorizontalAlign.Start)
-
-            // 分P列表（P2 Task 13：可切换）
-            if (this.vm.detail.pages.length > 1) {
-              Text(`分P（${this.vm.detail.pages.length}）`)
-                .fontSize(14)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(AppColors.TEXT_PRIMARY)
-                .width('100%')
-              ForEach(this.vm.detail.pages, (p: VideoPageItem, index: number) => {
-                Row() {
-                  Text(`P${p.page}`)
-                    .fontSize(13)
-                    .fontColor(AppColors.BRAND)
-                    .width(36)
-                  Text(p.part)
-                    .fontSize(13)
-                    .fontColor(AppColors.TEXT_PRIMARY)
-                    .layoutWeight(1)
-                    .maxLines(1)
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  Text(FormatUtils.duration(p.duration))
-                    .fontSize(12)
-                    .fontColor(AppColors.TEXT_SECONDARY)
-                }
-                .width('100%')
-                .padding({ top: 6, bottom: 6 })
-                .backgroundColor(this.vm.detail!.cid === p.cid ? AppColors.BRAND : Color.Transparent)
-                .borderRadius(8)
-                .onClick(() => {
-                  const d = this.vm.detail;
-                  if (d !== null && d.cid !== p.cid) {
-                    this.vm.switchPage(d.pages[index], index);
-                  }
-                })
-              }, (p: VideoPageItem) => `${p.page}`)
-            }
-
-            // 相关视频（P2 Task 13）
-            Text('相关推荐')
-              .fontSize(15)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(AppColors.TEXT_PRIMARY)
-              .width('100%')
-            if (this.vm.relatedState.status === DataStatus.Loading) {
-              LoadingProgress()
-                .width(28)
-                .height(28)
-                .color(AppColors.BRAND)
-                .margin({ top: 8 })
-            } else if (this.vm.relatedState.status === DataStatus.Data) {
-              WaterFlow() {
-                ForEach(this.vm.related, (item: VideoCard) => {
-                  FlowItem() {
-                    VideoCardView({
-                      card: item,
-                      onCardClick: (bvid: string) => {
-                        NavService.push(RouteNames.VIDEO_DETAIL, bvid);
-                      }
-                    })
-                  }
-                }, (item: VideoCard) => item.bvid)
-              }
-              .columnsTemplate('1fr 1fr')
-              .columnsGap(8)
-              .rowsGap(8)
-              .width('100%')
-            }
-
-            // 评论（P2 Task 14）
-            if (!this.commentLoaded) {
-              Text('加载评论…')
-                .fontSize(13)
-                .fontColor(AppColors.TEXT_SECONDARY)
-                .width('100%')
-                .textAlign(TextAlign.Center)
-                .padding(12)
-                .onClick(() => {
-                  this.loadComment();
-                })
-            } else {
-              CommentSection({ vm: this.commentVm })
-                .width('100%')
-            }
-          }
-          .width('100%')
-          .padding(12)
+      // ===== Tabs：推荐 / 评论 =====
+      Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
+        TabContent() {
+          this.RelatedTab()
         }
-        .layoutWeight(1)
+        .tabBar(this.tabBarItem(0, '推荐', ''))
+
+        TabContent() {
+          this.CommentTab()
+        }
+        .tabBar(
+          this.tabBarItem(1, '评论', ` ${FormatUtils.count(this.vm.detail?.reply ?? 0)}`))
       }
+      .barWidth('100%')
+      .barHeight(44)
+      .barBackgroundColor(AppColors.PAGE_BG)
+      .onChange((index: number) => {
+        this.currentTab = index;
+        if (index === 1 && !this.commentLoaded) {
+          this.loadComment();
+        }
+      })
+      .layoutWeight(1)
     }
     .width('100%')
     .height('100%')
     .backgroundColor(AppColors.PAGE_BG)
+  }
+
+  @Builder
+  tabBarItem(index: number, label: string, badge: string) {
+    Text(`${label}${badge}`)
+      .fontSize(14)
+      .fontWeight(this.currentTab === index ? FontWeight.Medium : FontWeight.Regular)
+      .fontColor(this.currentTab === index ? AppColors.BRAND : AppColors.TEXT_SECONDARY)
+      .padding({ left: 16, right: 16 })
+  }
+
+  @Builder
+  DetailHeader() {
+    Column({ space: 10 }) {
+      // 标题 + 播放数据
+      Text(this.vm.detail!.title)
+        .fontSize(17)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TEXT_PRIMARY)
+        .width('100%')
+      Row({ space: 12 }) {
+        Text(`${FormatUtils.count(this.vm.detail!.view)}播放`)
+          .fontSize(12)
+          .fontColor(AppColors.TEXT_SECONDARY)
+        Text(`${FormatUtils.count(this.vm.detail!.danmaku)}弹幕`)
+          .fontSize(12)
+          .fontColor(AppColors.TEXT_SECONDARY)
+        Text(FormatUtils.relativeTime(this.vm.detail!.pubdate))
+          .fontSize(12)
+          .fontColor(AppColors.TEXT_SECONDARY)
+        if (this.vm.playUrlInfo !== null) {
+          Text(this.vm.playUrlInfo.qualityDesc)
+            .fontSize(12)
+            .fontColor(AppColors.BRAND)
+        }
+      }
+      .width('100%')
+
+      // UP 主行
+      Row({ space: 10 }) {
+        Image(this.vm.detail!.ownerFace)
+          .width(40)
+          .height(40)
+          .borderRadius(20)
+          .alt($r('app.media.startIcon'))
+          .onClick(() => {
+            const d = this.vm.detail;
+            if (d !== null) {
+              const p: UserSpaceParam = { mid: d.ownerMid };
+              NavService.push(RouteNames.USER_SPACE, p);
+            }
+          })
+        Text(this.vm.detail!.ownerName)
+          .fontSize(15)
+          .fontColor(AppColors.TEXT_PRIMARY)
+          .layoutWeight(1)
+          .onClick(() => {
+            const d = this.vm.detail;
+            if (d !== null) {
+              const p: UserSpaceParam = { mid: d.ownerMid };
+              NavService.push(RouteNames.USER_SPACE, p);
+            }
+          })
+      }
+      .width('100%')
+      .padding(10)
+      .backgroundColor(AppColors.CARD_BG)
+      .borderRadius(10)
+
+      // 互动操作栏
+      Row() {
+        this.ActionItem(this.vm.liked ? '❤️' : '🤍', `${this.vm.detail!.like}`,
+          this.vm.liked ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
+            this.vm.like();
+          })
+        this.ActionItem('🪙', `${this.vm.detail!.coin}`,
+          this.vm.coined ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
+            this.vm.coin();
+          })
+        this.ActionItem(this.vm.favorited ? '⭐' : '☆', `${this.vm.detail!.favorite}`,
+          this.vm.favorited ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
+            this.vm.favorite(0);
+          })
+        this.ActionItem(this.vm.watchLaterAdded ? '✅' : '⏱️', '稍后再看',
+          this.vm.watchLaterAdded ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
+            this.vm.addWatchLater();
+          })
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.SpaceAround)
+      .padding({ top: 4, bottom: 4 })
+
+      if (this.vm.actionTip.length > 0) {
+        Text(this.vm.actionTip)
+          .fontSize(12)
+          .fontColor(AppColors.BRAND)
+          .width('100%')
+      }
+
+      // 简介
+      Column({ space: 4 }) {
+        Text(this.vm.detail!.desc.length > 0 ? this.vm.detail!.desc : '暂无简介')
+          .fontSize(13)
+          .fontColor(AppColors.TEXT_SECONDARY)
+          .width('100%')
+          .maxLines(this.descExpanded ? 100 : 2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .onClick(() => {
+            this.descExpanded = !this.descExpanded;
+          })
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+
+      // 分P列表
+      if (this.vm.detail!.pages.length > 1) {
+        this.PageList()
+      }
+    }
+    .width('100%')
+    .padding(12)
+  }
+
+  @Builder
+  PageList() {
+    Column({ space: 6 }) {
+      Text(`分P（${this.vm.detail!.pages.length}）`)
+        .fontSize(14)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TEXT_PRIMARY)
+        .width('100%')
+      ForEach(this.vm.detail!.pages, (p: VideoPageItem, index: number) => {
+        Row() {
+          Text(`P${p.page}`)
+            .fontSize(13)
+            .fontColor(AppColors.BRAND)
+            .width(36)
+          Text(p.part)
+            .fontSize(13)
+            .fontColor(AppColors.TEXT_PRIMARY)
+            .layoutWeight(1)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Text(FormatUtils.duration(p.duration))
+            .fontSize(12)
+            .fontColor(AppColors.TEXT_SECONDARY)
+        }
+        .width('100%')
+        .padding({ top: 6, bottom: 6 })
+        .backgroundColor(this.vm.detail!.cid === p.cid ? AppColors.BRAND : Color.Transparent)
+        .borderRadius(8)
+        .onClick(() => {
+          const d = this.vm.detail;
+          if (d !== null && d.cid !== p.cid) {
+            this.vm.switchPage(d.pages[index], index);
+          }
+        })
+      }, (p: VideoPageItem) => `${p.page}`)
+    }
+    .width('100%')
+  }
+
+  @Builder
+  RelatedTab() {
+
+    Scroll() {
+      Column({ space: 10 }) {
+        // ===== 详情区 =====
+        if (this.vm.detailState.status === DataStatus.Loading) {
+          LoadingView()
+            .layoutWeight(1)
+        } else if (this.vm.detailState.status === DataStatus.Error) {
+          ErrorView({
+            message: this.vm.detailState.error?.message ?? '详情加载失败',
+            retryable: true,
+            onRetry: () => {
+              this.vm.load(this.bvid);
+            }
+          })
+            .layoutWeight(1)
+        } else if (this.vm.detail !== null) {
+          // ===== 详情头部（标题/UP/互动/简介/分P）=====
+          this.DetailHeader()
+        }
+        // 相关视频
+        Text('相关推荐')
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TEXT_PRIMARY)
+          .width('100%')
+        if (this.vm.relatedState.status === DataStatus.Loading) {
+          LoadingProgress()
+            .width(28)
+            .height(28)
+            .color(AppColors.BRAND)
+            .margin({ top: 8 })
+        } else if (this.vm.relatedState.status === DataStatus.Data) {
+          WaterFlow() {
+            ForEach(this.vm.related, (item: VideoCard) => {
+              FlowItem() {
+                VideoCardView({
+                  card: item,
+                  onCardClick: (bvid: string) => {
+                    NavService.push(RouteNames.VIDEO_DETAIL, bvid);
+                  }
+                })
+              }
+            }, (item: VideoCard) => item.bvid)
+          }
+          .columnsTemplate('1fr 1fr')
+          .columnsGap(8)
+          .rowsGap(8)
+          .width('100%')
+        }
+      }
+      .width('100%')
+      .padding(12)
+    }
+    .scrollBar(BarState.Off)
+    .width('100%')
+    .height('100%')
+  }
+
+  @Builder
+  CommentTab() {
+    Scroll() {
+      Column({ space: 10 }) {
+        if (!this.commentLoaded) {
+          Row({ space: 8 }) {
+            LoadingProgress()
+              .width(22)
+              .height(22)
+              .color(AppColors.BRAND)
+            Text('加载评论…')
+              .fontSize(13)
+              .fontColor(AppColors.TEXT_SECONDARY)
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.Center)
+          .padding(24)
+        } else {
+          CommentSection({ vm: this.commentVm })
+            .width('100%')
+        }
+      }
+      .width('100%')
+      .padding(12)
+    }
+    .scrollBar(BarState.Off)
+    .width('100%')
+    .height('100%')
   }
 
   @Builder
