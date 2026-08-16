@@ -2,10 +2,12 @@ import { DataState } from '../common/state/DataState';
 import { AppError } from '../common/result/AppError';
 import { BangumiDetail, BangumiEpisode } from '../models/BangumiModels';
 import { BangumiRepository } from '../data/repository/BangumiRepository';
-import { PlayerController } from '../player/PlayerController';
+import { Player } from '../player/Player';
+import { PlayerRepository } from '../repository/PlayerRepository';
 
 /**
  * 番剧详情 ViewModel（P2 Task 20）：详情、追番、选集播放。
+ * 播放器经 PlayerRepository 管理（key=bangumi_seasonId）。
  */
 @Observed
 export class BangumiDetailViewModel {
@@ -16,10 +18,30 @@ export class BangumiDetailViewModel {
   playError: string = '';
   tipText: string = '';
   isBusy: boolean = false;
-  /** 播放器实例（本页持有） */
-  controller: PlayerController = new PlayerController();
-
+  cntlr: Player;
+  private cntlrKey: string;
   private repo: BangumiRepository = new BangumiRepository();
+  /** 占位播放器 id 自增序号，避免多实例碰撞 */
+  private static vmSeq: number = 0;
+
+  constructor() {
+    // 构造时先以占位 id 登记，页面 aboutToAppear 经 attachCntlr(seasonId) 换为真实实例
+    this.cntlrKey = `__bangumi_vm_${BangumiDetailViewModel.vmSeq}`;
+    BangumiDetailViewModel.vmSeq++;
+    this.cntlr = PlayerRepository.create(this.cntlrKey);
+  }
+
+  /** 绑定 seasonId 对应的播放器（页面 aboutToAppear 调用；同一 seasonId 复用已有实例） */
+  attachCntlr(seasonId: number): void {
+    const key = `bangumi_${seasonId}`;
+    if (this.cntlrKey === key) {
+      return;
+    }
+    const target = PlayerRepository.create(key);
+    PlayerRepository.remove(this.cntlrKey); // 释放占位/旧实例
+    this.cntlr = target;
+    this.cntlrKey = key;
+  }
 
   async load(seasonId: number): Promise<void> {
     this.state = DataState.loading<BangumiDetail>();
@@ -47,7 +69,7 @@ export class BangumiDetailViewModel {
       this.playError = r.error.message;
       return;
     }
-    await this.controller.load(r.value.url, PlayerController.defaultHeaders());
+    await this.cntlr.load(r.value.url, Player.defaultHeaders());
   }
 
   async toggleFollow(): Promise<void> {
@@ -65,7 +87,7 @@ export class BangumiDetailViewModel {
   }
 
   async release(): Promise<void> {
-    await this.controller.release();
+    await PlayerRepository.remove(this.cntlrKey);
   }
 
   get errorMessage(): string {

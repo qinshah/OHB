@@ -4,7 +4,7 @@ import { window } from '@kit.ArkUI';
 import { AccountManager } from '../services/account/AccountManager';
 import { DisplayHelper } from '../common/utils/DisplayHelper';
 import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
-import { WinUtils } from '../services/appearance/WinUtils';
+import { WinUtil } from '../services/appearance/WinUtils';
 import { ContextUtil } from '../common/utils/ContextUtil';
 
 const DOMAIN = 0x0000;
@@ -37,7 +37,7 @@ export default class EntryAbility extends UIAbility {
         return;
       }
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
-      WinUtils.init(windowStage)
+      WinUtil.init(windowStage)
     });
   }
 

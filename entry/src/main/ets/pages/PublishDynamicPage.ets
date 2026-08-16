@@ -1,5 +1,5 @@
 import { NavService } from '../common/navigation/NavService';
-import { PublishDynamicViewModel } from '../viewmodel/PublishDynamicViewModel';
+import { PublishDynamicViewModel } from '../player/PublishDynamicViewModel';
 import { AppColors } from '../theme/AppTheme';
 
 /**

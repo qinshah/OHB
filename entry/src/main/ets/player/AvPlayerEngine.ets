@@ -19,7 +19,6 @@ export class AvPlayerEngine implements IPlayerEngine {
   private bufferedMs: number = 0;
   private volume: number = 1.0;
   private speed: number = 1.0;
-
   private stateCb: ((state: PlaybackState) => void) | null = null;
   private progressCb: ((positionMs: number, durationMs: number, bufferedMs: number) => void) | null = null;
   private errorCb: ((code: number, message: string) => void) | null = null;
@@ -33,11 +32,16 @@ export class AvPlayerEngine implements IPlayerEngine {
     }
   }
 
+  async bindSurface(surfaceId: string): Promise<void> {
+    this.surfaceId = surfaceId
+  }
+
   private async ensurePlayer(): Promise<media.AVPlayer> {
     if (this.player !== null) {
       return this.player;
     }
     const p = await media.createAVPlayer();
+    // p.
     this.bindEvents(p);
     this.player = p;
     return p;
@@ -197,23 +201,6 @@ export class AvPlayerEngine implements IPlayerEngine {
         Logger.error('AvEngine', `late bind surface fail: ${JSON.stringify(e)}`);
       }
     }
-  }
-
-  /**
-   * 重建播放器并绑定新 surface（全屏/退出全屏切换）。
-   * 释放旧播放器（解除对旧 surface 的渲染），用最近一次源重建全新实例，
-   * 状态机走 initialized → prepared 时自动把 surfaceId 绑定到新实例。
-   */
-  async rebindSurface(surfaceId: string): Promise<void> {
-    this.surfaceId = surfaceId;
-    const url = this.pendingUrl;
-    const headers = this.pendingHeaders;
-    if (this.player === null || url.length === 0) {
-      // 尚无播放器/源：仅记录 surfaceId，setSource 时自动绑定
-      return;
-    }
-    await this.release();
-    await this.setSource(url, headers);
   }
 
   async play(): Promise<void> {

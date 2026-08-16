@@ -437,39 +437,39 @@ export struct SettingsPage {
     try {
       // 生成 JSON 数据
       const json = Pref.exportJson();
-      
+
       // 创建临时文件
       const tempDir = this.context.cacheDir;
       const fileName = 'ohb_settings.json';
       const filePath = `${tempDir}/${fileName}`;
-      
+
       // 写入文件
-      const file = fileIo.openSync(filePath, 
+      const file = fileIo.openSync(filePath,
         fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);
       fileIo.writeSync(file.fd, json);
       fileIo.closeSync(file);
-      
+
       // 使用系统分享
       // 将文件路径转换为 URI
       const uri = fileUri.getUriFromPath(filePath);
-      
+
       // 获取 JSON 文件的 UTD 类型
       const utdTypeId = utd.getUniformDataTypeByFilenameExtension('.json', utd.UniformDataType.FILE);
-      
+
       // 创建分享数据
       const sharedData = new systemShare.SharedData({
         utd: utdTypeId,
         uri: uri
       });
-      
+
       // 创建分享控制器
       const controller = new systemShare.ShareController(sharedData);
-      
+
       // 注册分享面板关闭监听
       controller.on('dismiss', () => {
         console.info('分享面板已关闭');
       });
-      
+
       // 显示分享面板
       controller.show(this.context as common.UIAbilityContext, {
         previewMode: systemShare.SharePreviewMode.DEFAULT,
@@ -493,7 +493,7 @@ export struct SettingsPage {
       const DocumentViewPicker = picker.DocumentViewPicker;
       const dp = new DocumentViewPicker(this.context);
       const uris = await dp.select({ maxSelectNumber: 1 });
-      
+
       if (uris.length === 0) {
         this.tipText = '已取消导入';
         return;

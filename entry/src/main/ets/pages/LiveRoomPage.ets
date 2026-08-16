@@ -1,12 +1,14 @@
 import { NavService } from '../common/navigation/NavService';
 import { DanmakuMessage } from '../models/LiveModels';
 import { LiveRoomViewModel } from '../viewmodel/LiveRoomViewModel';
-import { PlayerController } from '../player/PlayerController';
+import { Player } from '../player/Player';
+import { PlayerRepository } from '../repository/PlayerRepository';
 import { PlaybackState } from '../player/PlayerTypes';
 import { AppColors } from '../theme/AppTheme';
 
 /**
  * 直播间（P2 Task 15）：直播流播放（PlayerController）+ WebSocket 弹幕收发 + 屏蔽词。
+ * 播放器经 PlayerRepository 管理（key=live_roomId）。
  */
 @Component
 export struct LiveRoomPage {
@@ -18,19 +20,22 @@ export struct LiveRoomPage {
   @State showShieldPanel: boolean = false;
   @State shieldInput: string = '';
   @State playing: boolean = false;
-
-  private controller: PlayerController = new PlayerController();
-  private xcController: XComponentController = new XComponentController();
+  private cntlr: Player = PlayerRepository.create(this.roomId.toString());
   private scroller: Scroller = new Scroller();
   private uiTimer: number = -1;
-  private bound: boolean = false;
 
   aboutToAppear(): void {
-    this.controller.attachUIContext(this.getUIContext());
+    // 经 PlayerRepository 以 roomId 创建/复用播放器
+    const key = `live_${this.roomId}`;
+    if (this.cntlr.id !== key) {
+      PlayerRepository.remove(this.cntlr.id);
+      this.cntlr = PlayerRepository.create(key);
+    }
+    this.cntlr.attachUIContext(this.getUIContext());
     this.vm.init(this.roomId);
     this.vm.load().then(() => {
       if (this.vm.playInfo !== null) {
-        this.controller.load(this.vm.playInfo.playUrl, PlayerController.defaultHeaders());
+        this.cntlr.load(this.vm.playInfo.playUrl, Player.defaultHeaders());
       }
     });
     this.startUiTimer();
@@ -39,7 +44,7 @@ export struct LiveRoomPage {
   aboutToDisappear(): void {
     this.stopUiTimer();
     this.vm.release();
-    this.controller.release();
+    PlayerRepository.remove(`live_${this.roomId}`);
   }
 
   private startUiTimer(): void {
@@ -47,10 +52,10 @@ export struct LiveRoomPage {
       return;
     }
     this.uiTimer = setInterval(() => {
-      if (this.controller.state === PlaybackState.Playing) {
-        this.controller.syncProgress();
+      if (this.cntlr.state === PlaybackState.Playing) {
+        this.cntlr.syncProgress();
       }
-      this.playing = this.controller.state === PlaybackState.Playing;
+      this.playing = this.cntlr.state === PlaybackState.Playing;
       if (this.danmakuCount !== this.vm.danmaku.length) {
         this.danmakuCount = this.vm.danmaku.length;
         this.scroller.scrollEdge(Edge.Bottom);
@@ -65,28 +70,14 @@ export struct LiveRoomPage {
     }
   }
 
-  private doBind(surfaceId: string): void {
-    if (this.bound || surfaceId.length === 0) {
-      return;
-    }
-    this.bound = true;
-    this.controller.bindSurface(surfaceId);
-  }
-
   build() {
     Column() {
       // ===== 播放区 =====
       Stack() {
-        XComponent({
-          type: XComponentType.SURFACE,
-          controller: this.xcController
-        })
-          .onLoad(() => {
-            this.doBind(this.xcController.getXComponentSurfaceId());
-          })
-          .width('100%')
-          .height('100%')
-          .backgroundColor(Color.Black)
+        // TODO 视频
+        // .width('100%')
+        // .height('100%')
+        // .backgroundColor(Color.Black)
 
         // 返回 + 标题
         Row({ space: 6 }) {
@@ -123,7 +114,7 @@ export struct LiveRoomPage {
           .borderRadius(20)
           .backgroundColor('#66000000')
           .onClick(() => {
-            this.controller.togglePlay();
+            this.cntlr.togglePlay();
           })
         }
       }
@@ -185,7 +176,12 @@ export struct LiveRoomPage {
           })
       }
       .width('100%')
-      .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+      .padding({
+        left: 10,
+        right: 10,
+        top: 8,
+        bottom: 8
+      })
       .backgroundColor(AppColors.PAGE_BG)
 
       // 屏蔽词面板
@@ -248,7 +244,12 @@ export struct LiveRoomPage {
               .fontColor(AppColors.TEXT_PRIMARY)
               .backgroundColor(AppColors.CARD_BG)
               .borderRadius(12)
-              .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+              .padding({
+                left: 10,
+                right: 10,
+                top: 4,
+                bottom: 4
+              })
               .margin({ right: 8, bottom: 8 })
               .onClick(() => {
                 this.vm.removeShieldWord(word);

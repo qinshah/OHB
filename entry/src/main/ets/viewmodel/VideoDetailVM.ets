@@ -4,19 +4,24 @@ import { VideoDetail, VideoPage } from '../models/VideoDetail';
 import { PlayUrlInfo } from '../models/PlayUrlInfo';
 import { VideoCard } from '../models/VideoCard';
 import { VideoRepository } from '../data/repository/VideoRepository';
-import { PlayerController } from '../player/PlayerController';
+import { Player } from '../player/Player';
+import { PlayerRepository } from '../repository/PlayerRepository';
 import { Pref } from '../services/storage/Pref';
 
 /**
  * 视频详情 ViewModel（Task 9）：详情 + 播放地址加载，持有并驱动 PlayerController。
  *
- * 播放器实例由 VM 持有（单一所有者）：
- * - 视频页（VideoDetailPage）直接使用 vm.controller 渲染视频
- * - 全屏页（VideoFullscreenPage）经 PlayerControllerHolder 访问同一实例播放
+ * 播放器实例由 PlayerRepository 统一管理（静态单例，key=bvid）：
+ * - 详情页（VideoDetailPage）经 attachPlayer(bvid) 创建/复用播放器
+ * - 全屏页（VideoFullscreenPage）经 PlayerRepository.get(bvid) 访问同一实例播放
  * - 全屏期间视频页条件渲染不挂载 XComponent；退出全屏后由 onLoad 重建 surface
  */
 @Observed
-export class VideoDetailViewModel {
+export class VideoDetailVM {
+  bindXComponent(id: string) {
+    this.playerVM.bindSurface(id)
+  }
+
   detailState: DataState<VideoDetail> = DataState.idle<VideoDetail>();
   detail: VideoDetail | null = null;
   playUrlInfo: PlayUrlInfo | null = null;
@@ -32,12 +37,34 @@ export class VideoDetailViewModel {
   watchLaterAdded: boolean = false;
   actionBusy: boolean = false;
   actionTip: string = '';
-  /** 播放器实例（VM 持有；全屏页通过 PlayerControllerHolder 共享同一实例） */
-  controller: PlayerController = new PlayerController();
-
+  playerVM: Player;
+  private playerKey: string;
   private repo: VideoRepository = new VideoRepository();
+  /** 占位播放器 id 自增序号，避免多实例碰撞 */
+  private static vmSeq: number = 0;
   /** 防竞态序号 */
   private loadSeq: number = 0;
+
+  constructor() {
+    // 构造时先以占位 id 登记，页面 aboutToAppear 经 attachPlayer(bvid) 换为真实实例
+    this.playerKey = `__video_vm_${VideoDetailVM.vmSeq}`;
+    VideoDetailVM.vmSeq++;
+    this.playerVM = PlayerRepository.create(this.playerKey);
+  }
+
+  /**
+   * 绑定 bvid 对应的播放器（页面 aboutToAppear 调用；同一 bvid 复用已有实例）。
+   * 通过 PlayerRepository 以 bvid 为 key 建立联系，全屏页可经 get(bvid) 获取同一实例。
+   */
+  attachPlayer(bvid: string): void {
+    if (this.playerKey === bvid) {
+      return;
+    }
+    const target = PlayerRepository.create(bvid);
+    PlayerRepository.remove(this.playerKey); // 释放占位/旧实例
+    this.playerVM = target;
+    this.playerKey = bvid;
+  }
 
   async load(bvid: string): Promise<void> {
     this.loadSeq++;
@@ -82,12 +109,12 @@ export class VideoDetailViewModel {
     }
     this.actionBusy = true;
     this.actionTip = '';
-    const pos = this.controller.positionMs;
+    const pos = this.playerVM.positionMs;
     this.detail.cid = page.cid;
     await this.loadPlayUrl(this.loadSeq, this.detail.bvid, this.detail.cid);
     if (pos > 0 && this.playUrlInfo !== null) {
       // 新分P从 0 开始播放（不沿用旧进度）
-      this.controller.seekTo(0);
+      this.playerVM.seekTo(0);
     }
     this.actionBusy = false;
   }
@@ -200,11 +227,11 @@ export class VideoDetailViewModel {
       return;
     }
     this.playUrlInfo = r.value;
-    await this.controller.load(this.playUrlInfo.url, PlayerController.defaultHeaders());
+    await this.playerVM.load(this.playUrlInfo.url, Player.defaultHeaders());
     // 应用默认倍速（设置中心，AP-4）
     const speed = Pref.DEFAULT_SPEED.get();
     if (speed !== 1) {
-      await this.controller.setSpeed(speed);
+      await this.playerVM.setSpeed(speed);
     }
   }
 
@@ -219,6 +246,6 @@ export class VideoDetailViewModel {
 
   async release(): Promise<void> {
     this.loadSeq++;
-    await this.controller.release();
+    await PlayerRepository.remove(this.playerKey);
   }
 }

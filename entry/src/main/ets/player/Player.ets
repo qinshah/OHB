@@ -9,6 +9,9 @@ import { AppConstants } from '../common/constants/AppConstants';
 import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
 import { MediaSessionHelper } from '../services/media/MediaSessionHelper';
 import { avSession } from '@kit.AVSessionKit';
+import { RouteNames } from '../pages/RouteNames';
+import { NavService } from '../common/navigation/NavService';
+import hilog from '@ohos.hilog';
 
 /**
  * 统一播放控制器（AP-3 / Task 5）
@@ -25,13 +28,14 @@ import { avSession } from '@kit.AVSessionKit';
  * - 亮度保持窗口级；brightness 字段即当前窗口亮度
  */
 @Observed
-export class PlayerController {
+export class Player {
+  /** 播放器标识（由 PlayerRepository 登记，页面间通过 id 建立联系，如 bvid/roomId/seasonId） */
+  id: string = '';
   /** 播放状态 */
   state: PlaybackState = PlaybackState.Idle;
   positionMs: number = 0;
   durationMs: number = 0;
   bufferedMs: number = 0;
-
   /** 视频尺寸（来自内核 prepared / videoSizeChange） */
   videoWidth: number = 0;
   videoHeight: number = 0;
@@ -40,26 +44,28 @@ export class PlayerController {
   /** 媒体会话元数据（锁屏/控制中心显示，P2 Task 20） */
   mediaTitle: string = '';
   mediaArtist: string = '';
-
   /** 系统音量 0..1（实际监控值，由 SystemAudioHelper 监听器维护；调节由 UI 层 AVVolumePanel 完成） */
   systemVolume: number = 0;
   /** 屏幕亮度 0..1（窗口级，-1 表示未读取） */
   brightness: number = -1;
   /** 倍速 */
   speed: number = 1.0;
-  /** 是否处于全屏页（仅由 VideoFullscreenPage 设置 true / 离开时设置 false） */
-  isFullscreen: boolean = false;
+  /** 是否处于全屏页 */
+  private _fullscreen: boolean = false;
+
+  /** 是否处于全屏页 */
+  get fullscreen() {
+    return this._fullscreen
+  }
+
   /** 是否缓冲中 */
   isPreparing: boolean = false;
   /** 错误信息（空串表示无错误） */
   errorMessage: string = '';
   /** 播放完成 */
   isCompleted: boolean = false;
-
-  private engine: IPlayerEngine;
+  private engine: IPlayerEngine = new AvPlayerEngine();
   private uiContext: UIContext | null = null;
-  /** UI 注册的全屏切换回调：VideoDetailPage push 路由 / VideoFullscreenPage pop */
-  private fullscreenToggleCb: (() => void) | null = null;
   /** 视频宽高比就绪回调（aspectRatio 首次 > 0 时触发一次，由 VideoFullscreenPage 使用） */
   private aspectReadyCb: ((aspect: number) => void) | null = null;
   /** 系统音量变化回调（由 SystemAudioHelper 监听器驱动，UI 注册用于刷新 Hub） */
@@ -69,8 +75,8 @@ export class PlayerController {
   /** 重建播放器后需要恢复到的进度（ms），prepared 时消费 */
   private pendingSeekMs: number = 0;
 
-  constructor(engine: IPlayerEngine | null = null) {
-    this.engine = engine ?? new AvPlayerEngine();
+  constructor(id: string = '') {
+    this.id = id;
     this.bindEngine(this.engine);
     // 初始化系统音量监听：Hub 显示真实监控值（多监听者模式，Controller 仅负责回写字段）
     this.systemVolume = SystemAudioHelper.normalizedVolume;
@@ -132,11 +138,6 @@ export class PlayerController {
 
   attachUIContext(ctx: UIContext): void {
     this.uiContext = ctx;
-  }
-
-  /** UI 注册全屏切换回调 */
-  setFullscreenToggle(cb: (() => void) | null): void {
-    this.fullscreenToggleCb = cb;
   }
 
   /**
@@ -203,20 +204,6 @@ export class PlayerController {
   /** 绑定渲染 surface（XComponent onLoad 后调用；页面切换时可重复调用） */
   bindSurface(surfaceId: string): void {
     this.engine.setSurface(surfaceId);
-  }
-
-  /**
-   * 重建播放器并切换到新 surface（全屏/退出全屏切换）。
-   * 内部释放旧播放器并用同一源重建，prepared 后自动恢复到 positionMs 继续播放，
-   * 彻底规避 AVPlayer 直接切 surfaceId 的黑屏问题。
-   */
-  async rebindSurface(surfaceId: string, positionMs: number): Promise<void> {
-    this.pendingSeekMs = Math.max(0, positionMs);
-    // 等待新实例的首帧尺寸上报
-    this.aspectRatio = 0;
-    this.videoWidth = 0;
-    this.videoHeight = 0;
-    await this.engine.rebindSurface(surfaceId);
   }
 
   /** 加载并播放 */
@@ -309,10 +296,13 @@ export class PlayerController {
     await this.engine.setSpeed(speed);
   }
 
-  /** UI 触发全屏切换（实际行为由 fullscreenToggleCb 决定） */
+  /** UI 触发全屏切换：以本播放器 id 作为路由参数，全屏页经 PlayerRepository.get(id) 获取同一实例 */
   toggleFullscreen(): void {
-    if (this.fullscreenToggleCb !== null) {
-      this.fullscreenToggleCb();
+    hilog.debug(0, TAG, `切换全屏前是否全屏：${this._fullscreen}`);
+    if (this._fullscreen) {
+      NavService.pop();
+    } else {
+      NavService.push(RouteNames.VIDEO_FULLSCREEN, this.id);
     }
   }
 
@@ -333,3 +323,5 @@ export class PlayerController {
     this.state = PlaybackState.Released;
   }
 }
+
+const TAG = Player.name

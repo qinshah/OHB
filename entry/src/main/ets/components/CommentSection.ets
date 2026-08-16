@@ -1,8 +1,8 @@
-import { DataStatus } from '../../common/state/DataState';
-import { FormatUtils } from '../../common/utils/FormatUtils';
-import { CommentItem } from '../../models/CommentModels';
-import { CommentViewModel } from '../../viewmodel/CommentViewModel';
-import { AppColors } from '../../theme/AppTheme';
+import { DataStatus } from '../common/state/DataState';
+import { FormatUtils } from '../common/utils/FormatUtils';
+import { CommentItem } from '../models/CommentModels';
+import { CommentViewModel } from '../viewmodel/CommentViewModel';
+import { AppColors } from '../theme/AppTheme';
 
 /**
  * 评论组件（P2 Task 14）：主评论分页、点赞、楼中楼展开、发表评论。

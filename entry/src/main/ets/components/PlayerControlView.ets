@@ -1,9 +1,10 @@
 // [API 23+] 播放器控制层
 import { AVVolumePanel } from '@kit.AudioKit';
-import { PlayerController } from '../../player/PlayerController';
-import { PlaybackState } from '../../player/PlayerTypes';
-import { FormatUtils } from '../../common/utils/FormatUtils';
-import { SystemAudioHelper } from '../../common/utils/SystemAudioHelper';
+import { Player } from '../player/Player';
+import { PlayerRepository } from '../repository/PlayerRepository';
+import { PlaybackState } from '../player/PlayerTypes';
+import { FormatUtils } from '../common/utils/FormatUtils';
+import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
 
 /** 手势类型：垂直=左亮度/右音量，水平=进度拖拽 */
 enum PlayerGestureType {
@@ -29,42 +30,26 @@ enum HubMode {
  * 3. 手势监听层（全屏：单击切控制层、双击播放/暂停、垂直调音量亮度、水平拖进度）
  * 4. 控制层（最顶层：进度条、播放/暂停、全屏按钮）
  *
- * 状态更新策略：
- * - 不使用 @ObjectLink（实测观察不可靠），controller 用普通字段 + 250ms UI 同步定时器，
- *   把内核状态（进度/时长/播放态/音量/亮度）拷贝到本地 @State 镜像，保证 UI 实时刷新
- * - 播放中每 250ms 从内核同步真实进度（PiliPlus 式连续进度流兜底）
- * - 水平滑动设置进度：滑动中 Hub 显示目标进度（只预览不 seek），滑动结束才真正 seek
- * - 音量监听：显式注册 SystemAudioHelper 监听，Hub 显示 streamVolumeChange 回写的实际值
  */
 @Component
 export struct PlayerControlView {
-  /**
-   * 共享控制器。
-   * 仅用 @ObjectLink 满足父组件传参（普通字段在 ArkTS 严格模式下必须初始化，
-   * 直接 new 会多注册一个音量监听）。UI 刷新不依赖其观察能力，
-   * 由 250ms UI 定时器同步到下方 @State 镜像，保证实时更新。
-   */
-  @ObjectLink controller: PlayerController;
-
-  /** 本地状态镜像（UI 实际渲染源） */
+  /** 播放器业务 id（如 bvid），经 PlayerRepository.get(id) 获取共享的 Player 实例 */
+  @Prop playerId: string = ''
+  @State playerVM: Player =
+    PlayerRepository.get(this.playerId) ?? PlayerRepository.create(this.playerId)
   @State private posMs: number = 0;
   @State private durMs: number = 0;
   @State private playing: boolean = false;
   @State private vol: number = 0;
   @State private bri: number = 0.5;
-  @State private fullscreen: boolean = false;
-
   @State private controlsVisible: boolean = true;
   @State private dragging: boolean = false;
   @State private dragValue: number = 0;
-
   /** Hub 显示状态 */
   @State private hubVisible: boolean = false;
   @State private hubMode: HubMode = HubMode.Volume;
-
   /** AVVolumePanel 绑定的系统音量档位（绝对值，min..max）。更新此值即驱动系统音量变化 */
   @State private panelVolumeLevel: number = 0;
-
   private hideTimer: number = -1;
   private hubTimer: number = -1;
   private uiTimer: number = -1;
@@ -81,12 +66,12 @@ export struct PlayerControlView {
 
   aboutToAppear(): void {
     // 同步一次真实系统音量，保证面板档位与 Hub 初始值正确
-    this.controller.syncSystemVolume();
+    this.playerVM.syncSystemVolume();
     this.panelVolumeLevel = SystemAudioHelper.currentVolume;
     // 显式注册系统音量监听：硬件音量键/外部变化 → Hub 显示监听到的实际值
     this.volumeListener = (): void => {
       this.panelVolumeLevel = SystemAudioHelper.currentVolume;
-      this.vol = this.controller.systemVolume;
+      this.vol = this.playerVM.systemVolume;
       this.showVolumeHub();
     };
     SystemAudioHelper.addVolumeListener(this.volumeListener);
@@ -155,7 +140,12 @@ export struct PlayerControlView {
           }
           .alignItems(HorizontalAlign.Start)
         }
-        .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+        .padding({
+          left: 16,
+          right: 16,
+          top: 10,
+          bottom: 10
+        })
         .backgroundColor('#99000000')
         .borderRadius(12)
         .hitTestBehavior(HitTestMode.None)
@@ -171,7 +161,7 @@ export struct PlayerControlView {
             GestureGroup(GestureMode.Exclusive,
               TapGesture({ count: 2 })
                 .onAction(() => {
-                  this.controller.togglePlay();
+                  this.playerVM.togglePlay();
                   this.resetHideTimer();
                 }),
               TapGesture({ count: 1 })
@@ -201,7 +191,7 @@ export struct PlayerControlView {
             GestureGroup(GestureMode.Exclusive,
               TapGesture({ count: 2 })
                 .onAction(() => {
-                  this.controller.togglePlay();
+                  this.playerVM.togglePlay();
                   this.resetHideTimer();
                 }),
               TapGesture({ count: 1 })
@@ -240,7 +230,7 @@ export struct PlayerControlView {
           .width(28)
           .height(28)
           .onClick(() => {
-            this.controller.togglePlay();
+            this.playerVM.togglePlay();
             this.resetHideTimer();
           })
 
@@ -265,7 +255,7 @@ export struct PlayerControlView {
               }
               if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
                 this.dragging = false;
-                this.controller.seekTo(value);
+                this.playerVM.seekTo(value);
                 this.resetHideTimer();
               }
             })
@@ -276,7 +266,7 @@ export struct PlayerControlView {
 
           // 全屏按钮
           Stack() {
-            SymbolGlyph(this.fullscreen
+            SymbolGlyph(this.playerVM.fullscreen
               ? $r('sys.symbol.arrow_down_right_and_arrow_up_left')
               : $r('sys.symbol.arrow_up_left_and_arrow_down_right'))
               .fontSize(18)
@@ -285,7 +275,7 @@ export struct PlayerControlView {
           .width(28)
           .height(28)
           .onClick(() => {
-            this.controller.toggleFullscreen();
+            this.playerVM.toggleFullscreen();
             this.resetHideTimer();
           })
         }
@@ -317,15 +307,14 @@ export struct PlayerControlView {
    * 保证进度条/时间/按钮/音量/亮度实时刷新。
    */
   private syncUi(): void {
-    if (!this.dragging && this.controller.state === PlaybackState.Playing) {
-      this.controller.syncProgress();
+    if (!this.dragging && this.playerVM.state === PlaybackState.Playing) {
+      this.playerVM.syncProgress();
     }
-    this.posMs = this.controller.positionMs;
-    this.durMs = this.controller.durationMs;
-    this.playing = this.controller.state === PlaybackState.Playing;
-    this.vol = this.controller.systemVolume;
-    this.fullscreen = this.controller.isFullscreen;
-    const b = this.controller.brightness;
+    this.posMs = this.playerVM.positionMs;
+    this.durMs = this.playerVM.durationMs;
+    this.playing = this.playerVM.state === PlaybackState.Playing;
+    this.vol = this.playerVM.systemVolume;
+    const b = this.playerVM.brightness;
     if (b >= 0) {
       this.bri = b;
     }
@@ -345,12 +334,12 @@ export struct PlayerControlView {
     this.gestureVolumeSide = isVolumeSide;
     this.gestureType = PlayerGestureType.None;
     if (isVolumeSide) {
-      this.controller.syncSystemVolume();
-      this.gestureBase = this.controller.systemVolume;
+      this.playerVM.syncSystemVolume();
+      this.gestureBase = this.playerVM.systemVolume;
       this.panelVolumeLevel = SystemAudioHelper.currentVolume;
     } else {
-      await this.controller.getBrightness();
-      this.gestureBase = this.controller.brightness >= 0 ? this.controller.brightness : 0.5;
+      await this.playerVM.getBrightness();
+      this.gestureBase = this.playerVM.brightness >= 0 ? this.playerVM.brightness : 0.5;
     }
   }
 
@@ -405,7 +394,7 @@ export struct PlayerControlView {
     const level = this.screenH * 3;
     const delta = -event.offsetY / level;
     const next = Math.max(0, Math.min(1, this.gestureBase + delta));
-    this.controller.setBrightness(next);
+    this.playerVM.setBrightness(next);
     this.bri = next;
     this.showBrightnessHub();
   }
@@ -417,7 +406,7 @@ export struct PlayerControlView {
     if (t === PlayerGestureType.Seek) {
       this.dragging = false;
       if (commitSeek) {
-        this.controller.seekTo(this.dragValue);
+        this.playerVM.seekTo(this.dragValue);
         this.resetHideTimer();
       }
     }
@@ -442,7 +431,7 @@ export struct PlayerControlView {
       clearTimeout(this.hideTimer);
     }
     this.hideTimer = setTimeout(() => {
-      if (this.controller.state === PlaybackState.Playing) {
+      if (this.playerVM.state === PlaybackState.Playing) {
         this.controlsVisible = false;
       }
     }, 3000);
@@ -462,7 +451,7 @@ export struct PlayerControlView {
     }
     const clamped = Math.max(0, Math.min(1, normalized));
     const target = Math.round(min + clamped * range);
-    this.controller.systemVolume = clamped;
+    this.playerVM.systemVolume = clamped;
     this.vol = clamped;
     if (target === this.panelVolumeLevel) {
       return;

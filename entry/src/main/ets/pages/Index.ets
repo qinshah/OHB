@@ -37,7 +37,6 @@ import {
 } from './RouteParams';
 import { winUtils } from '../services/appearance/WinUtils';
 import { IndexViewModel } from '../viewmodel/IndexViewModel';
-import { PlayerController } from '../player/PlayerController';
 
 // Tab 配置：标签名称和系统图标资源
 const TAB_LABELS: string[] = ['首页', '动态', '我的'];
@@ -102,7 +101,7 @@ struct Index {
       .hideTitleBar(true)
     } else if (name === RouteNames.VIDEO_FULLSCREEN) {
       NavDestination() {
-        VideoFullscreenPage({ controller: param as PlayerController })
+        VideoFullscreenPage({ playerId: param as string })
       }
       .hideTitleBar(true)
     } else if (name === RouteNames.LOGIN) {

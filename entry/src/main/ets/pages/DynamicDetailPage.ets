@@ -4,7 +4,7 @@ import { FormatUtils } from '../common/utils/FormatUtils';
 import { DynamicKind } from '../models/DynamicItem';
 import { DynamicDetailViewModel } from '../viewmodel/DynamicDetailViewModel';
 import { CommentViewModel } from '../viewmodel/CommentViewModel';
-import { CommentSection } from './components/CommentSection';
+import { CommentSection } from '../components/CommentSection';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
 import { RouteNames } from './RouteNames';

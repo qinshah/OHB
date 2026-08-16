@@ -1,12 +1,12 @@
 import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
-export let winUtils: WinUtils
+export let winUtils: WinUtil
 
-export class WinUtils {
+export class WinUtil {
   static init(winStage: window.WindowStage) {
     if (winUtils == undefined) {
-      winUtils = new WinUtils(winStage)
+      winUtils = new WinUtil(winStage)
     }
   }
 
@@ -38,4 +38,4 @@ export class WinUtils {
   }
 }
 
-const TAG = WinUtils.name
+const TAG = WinUtil.name

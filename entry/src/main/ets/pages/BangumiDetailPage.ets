@@ -17,13 +17,14 @@ export struct BangumiDetailPage {
   @State playing: boolean = false;
   @State posMs: number = 0;
   @State durMs: number = 0;
-
   private xcController: XComponentController = new XComponentController();
   private bound: boolean = false;
   private uiTimer: number = -1;
 
   aboutToAppear(): void {
-    this.vm.controller.attachUIContext(this.getUIContext());
+    // 先经 PlayerRepository 以 seasonId 绑定/创建播放器
+    this.vm.attachCntlr(this.seasonId);
+    this.vm.cntlr.attachUIContext(this.getUIContext());
     this.vm.load(this.seasonId);
     this.startUiTimer();
   }
@@ -38,12 +39,12 @@ export struct BangumiDetailPage {
       return;
     }
     this.uiTimer = setInterval(() => {
-      if (this.vm.controller.state === PlaybackState.Playing) {
-        this.vm.controller.syncProgress();
+      if (this.vm.cntlr.state === PlaybackState.Playing) {
+        this.vm.cntlr.syncProgress();
       }
-      this.playing = this.vm.controller.state === PlaybackState.Playing;
-      this.posMs = this.vm.controller.positionMs;
-      this.durMs = this.vm.controller.durationMs;
+      this.playing = this.vm.cntlr.state === PlaybackState.Playing;
+      this.posMs = this.vm.cntlr.positionMs;
+      this.durMs = this.vm.cntlr.durationMs;
     }, 500);
   }
 
@@ -54,28 +55,14 @@ export struct BangumiDetailPage {
     }
   }
 
-  private doBind(surfaceId: string): void {
-    if (this.bound || surfaceId.length === 0) {
-      return;
-    }
-    this.bound = true;
-    this.vm.controller.bindSurface(surfaceId);
-  }
-
   build() {
     Column() {
       // 播放区
       Stack() {
-        XComponent({
-          type: XComponentType.SURFACE,
-          controller: this.xcController
-        })
-          .onLoad(() => {
-            this.doBind(this.xcController.getXComponentSurfaceId());
-          })
-          .width('100%')
-          .height('100%')
-          .backgroundColor(Color.Black)
+        // TODO 视频
+        // width('100%')
+        //   .height('100%')
+        //   .backgroundColor(Color.Black)
 
         // 返回
         Stack() {
@@ -106,8 +93,9 @@ export struct BangumiDetailPage {
             .borderRadius(22)
             .backgroundColor('#66000000')
             .onClick(() => {
-              this.vm.controller.togglePlay();
+              this.vm.cntlr.togglePlay();
             })
+
             Text(`${FormatUtils.durationMs(this.posMs)} / ${FormatUtils.durationMs(this.durMs)}`)
               .fontSize(11)
               .fontColor(Color.White)
@@ -166,7 +154,12 @@ export struct BangumiDetailPage {
                   .fontColor(this.vm.detail.isFollow ? AppColors.TEXT_SECONDARY : Color.White)
                   .backgroundColor(this.vm.detail.isFollow ? AppColors.CARD_BG : AppColors.BRAND)
                   .borderRadius(14)
-                  .padding({ left: 16, right: 16, top: 5, bottom: 5 })
+                  .padding({
+                    left: 16,
+                    right: 16,
+                    top: 5,
+                    bottom: 5
+                  })
                   .border({ width: 1, color: AppColors.DIVIDER })
                   .onClick(() => {
                     this.vm.toggleFollow();
@@ -212,7 +205,12 @@ export struct BangumiDetailPage {
                   .fontColor(this.vm.currentEpisode?.epId === ep.epId ? Color.White : AppColors.TEXT_PRIMARY)
                   .backgroundColor(this.vm.currentEpisode?.epId === ep.epId ? AppColors.BRAND : AppColors.CARD_BG)
                   .borderRadius(12)
-                  .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+                  .padding({
+                    left: 12,
+                    right: 12,
+                    top: 6,
+                    bottom: 6
+                  })
                   .margin({ right: 8, bottom: 8 })
                   .onClick(() => {
                     this.vm.selectEpisode(ep);

@@ -1,6 +1,7 @@
 // [API 23+] 全局导航服务
 import { Logger } from '../utils/Logger';
 import { DisplayHelper } from '../utils/DisplayHelper';
+import { Player } from '../../player/Player';
 
 /**
  * 全局导航服务。

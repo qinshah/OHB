@@ -21,7 +21,7 @@ import { RouteNames } from '../../pages/RouteNames';
  */
 export class DisplayHelper {
   private static win: window.Window | null = null;
-  private static pInFullscreen: boolean = false;
+  private static _fullscreen: boolean = false;
   private static pLandscape: boolean = false;
   /** 是否已显式调用过 enter/exit，避免初始页面误触发恢复 */
   private static pInitialized: boolean = false;
@@ -36,8 +36,8 @@ export class DisplayHelper {
     }
   }
 
-  static get isFullscreen(): boolean {
-    return DisplayHelper.pInFullscreen;
+  static get fullscreen(): boolean {
+    return DisplayHelper._fullscreen;
   }
 
   static get isLandscape(): boolean {
@@ -56,13 +56,9 @@ export class DisplayHelper {
     if (DisplayHelper.win === null || !DisplayHelper.pInitialized) {
       return;
     }
-    // 视频全屏页：由 VideoFullscreenPage 加载视频后主动 applyFullscreenForVideo
-    // 此处无需处理
-    if (name === RouteNames.VIDEO_FULLSCREEN) {
-      return;
-    }
-    // 其它任何页面：若当前处于全屏态，则退出全屏并恢复竖屏
-    if (DisplayHelper.pInFullscreen) {
+    DisplayHelper._fullscreen = name === RouteNames.VIDEO_FULLSCREEN
+    // 其它任何页面：退出全屏并恢复竖屏
+    if (!DisplayHelper._fullscreen) {
       await DisplayHelper.exitAppFullscreen();
     }
   }
@@ -93,7 +89,6 @@ export class DisplayHelper {
     try {
       await DisplayHelper.win.setWindowLayoutFullScreen(true);
       await DisplayHelper.win.setWindowSystemBarEnable([]);
-      DisplayHelper.pInFullscreen = true;
     } catch (e) {
       Logger.error('Display', `enterAppFullscreen fail: ${JSON.stringify(e)}`);
     }
@@ -108,7 +103,6 @@ export class DisplayHelper {
       await DisplayHelper.win.setPreferredOrientation(window.Orientation.UNSPECIFIED);
       await DisplayHelper.win.setWindowLayoutFullScreen(false);
       await DisplayHelper.win.setWindowSystemBarEnable(['status', 'navigation']);
-      DisplayHelper.pInFullscreen = false;
       DisplayHelper.pLandscape = false;
     } catch (e) {
       Logger.error('Display', `exitAppFullscreen fail: ${JSON.stringify(e)}`);
