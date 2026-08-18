@@ -1,7 +1,11 @@
 export class ContextUtil {
-  static context: Context
+  private static _context: Context | undefined = undefined
+
+  static get context(): Context | undefined {
+    return ContextUtil._context
+  }
 
   static init(context: Context) {
-    ContextUtil.context = context
+    ContextUtil._context = context
   }
 }

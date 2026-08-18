@@ -6,7 +6,22 @@ import { Callback } from '@kit.BasicServicesKit';
 import { ContextUtil } from '../../common/utils/ContextUtil';
 
 const prefRegistry: PrefItem<preferences.ValueType>[] = [];
+const PREFS_NAME = 'user_prefs'
 let p: preferences.Preferences
+
+function getP() {
+  p ??= preferences.getPreferencesSync(ContextUtil.context, { name: PREFS_NAME })
+  return p
+}
+
+export async function initP() {
+  if (p == undefined) {
+    if (ContextUtil.context == undefined) {
+      await Promise.resolve()
+    }
+    p = preferences.getPreferencesSync(ContextUtil.context, { name: PREFS_NAME })
+  }
+}
 
 export interface EnumEntry<T> {
   readonly label: string;
@@ -43,6 +58,7 @@ export class PrefItem<T extends preferences.ValueType> {
   private onChange: Callback<preferences.ValueType>
 
   constructor(props: PrefItemP<T>) {
+    initP();
     this.key = props.key;
     this.def = props.def;
     this.title = props.title;
@@ -53,24 +69,28 @@ export class PrefItem<T extends preferences.ValueType> {
     this.onChange = props.onChange;
     prefRegistry.push(this);
     if (this.needInit) {
-      // p ??= preferences.getPreferencesSync(ContextUtil.context, { name: PREFS_NAME })
-      // this.onChange(this.get());
+      // this.init()
     }
   }
 
+  private async init() {
+    await initP()
+    this.onChange(this.get())
+  }
+
   get(): T {
-    return p.getSync(this.key, this.def) as T;
+    return getP().getSync(this.key, this.def) as T;
   }
 
   put(value: T): void {
-    p.putSync(this.key, this.def)
-    p.flushSync();
+    getP().putSync(this.key, this.def)
+    getP().flushSync();
     this.onChange(value);
   }
 
   delete(): void {
-    p.deleteSync(this.key)
-    p.flushSync();
+    getP().deleteSync(this.key)
+    getP().flushSync();
   }
 
   /**
@@ -94,8 +114,6 @@ export class PrefItem<T extends preferences.ValueType> {
   }
 }
 
-const PREFS_NAME = 'user_prefs'
-
 /**
  * 设置中心（AP-4 / Task 11）
  * - 不提供 get/put/delete，只提供 static 的 PrefItem 实例与导入/导出/重置接口
@@ -111,6 +129,7 @@ export class Pref {
   static get items(): PrefItem<preferences.ValueType>[] {
     return prefRegistry;
   }
+
   // ---------- 设置项定义（static PrefItem 实例） ----------
 
   /** 播放：默认清晰度（qn） */
@@ -199,7 +218,7 @@ export class Pref {
    * （直接读取 preferences 的 getAll，再按默认值过滤）
    */
   static exportJson(): string {
-    return JSON.stringify(p.getAllSync(), null, 2);
+    return JSON.stringify(getP().getAllSync(), null, 2);
   }
 
   /**
@@ -212,9 +231,9 @@ export class Pref {
     }
     const items = Object.entries<preferences.ValueType>(JSON.parse(json));
     for (const item of items) {
-      await p.put(item[0], item[1]);
+      await getP().put(item[0], item[1]);
     }
-    await p.flush();
+    await getP().flush();
     Logger.info('Pref', '用户偏好导入成功');
     return Result.ok<boolean>(true);
   }
@@ -222,8 +241,8 @@ export class Pref {
   /** 重置：清除所有设置（调用 preferences clear） */
   static async resetAll(): Promise<Result<boolean>> {
     try {
-      await p.clear();
-      await p.flush();
+      await getP().clear();
+      await getP().flush();
       return Result.ok<boolean>(true);
     } catch (e) {
       return Result.err<boolean>(AppError.unknown(`重置失败：${JSON.stringify(e)}`));
