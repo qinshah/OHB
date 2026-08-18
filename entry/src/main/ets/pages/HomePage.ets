@@ -1,11 +1,10 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { VideoCard } from '../models/VideoCard';
 import { HomeViewModel } from '../viewmodel/HomeViewModel';
 import { VideoCardView } from '../common/components/VideoCardView';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 import { IndexViewModel } from '../viewmodel/IndexViewModel';
 
 /**
@@ -54,7 +53,7 @@ export struct HomePage {
                   VideoCardView({
                     card: item,
                     onCardClick: (bvid: string) => {
-                      NavService.push(RouteNames.VIDEO_DETAIL, bvid);
+                      Route.push(Route.videoDetail, bvid);
                     }
                   })
                 }
@@ -95,7 +94,7 @@ export struct HomePage {
       })
         .focusable(false)
         .onClick(() => {
-          NavService.push(RouteNames.SEARCH)
+          Route.push(Route.search)
         })
       Blank()
     }

@@ -1,40 +1,11 @@
 import { HdsNavigation, HdsTabs, HdsTabsController, hdsMaterial, HdsAnimationMode } from '@kit.UIDesignKit';
 import { SymbolGlyphModifier } from '@kit.ArkUI';
 import { HomePage } from './HomePage';
-import { SearchPage } from './SearchPage';
-import { SearchResultPage } from './SearchResultPage';
 import { DynamicPage } from './DynamicPage';
 import { MinePage } from './MinePage';
-import { LoginPage } from './LoginPage';
-import { VideoDetailPage } from './VideoDetailPage';
-import { VideoFullscreenPage } from './VideoFullscreenPage';
-import { LivePage } from './LivePage';
-import { LiveRoomPage } from './LiveRoomPage';
-import { FavoritesPage } from './FavoritesPage';
-import { FavoriteDetailPage } from './FavoriteDetailPage';
-import { HistoryPage } from './HistoryPage';
-import { WatchLaterPage } from './WatchLaterPage';
-import { UserSpacePage } from './UserSpacePage';
-import { DynamicDetailPage } from './DynamicDetailPage';
-import { PublishDynamicPage } from './PublishDynamicPage';
-import { TopicPage } from './TopicPage';
-import { TopicFeedPage } from './TopicFeedPage';
-import { BangumiPage } from './BangumiPage';
-import { BangumiDetailPage } from './BangumiDetailPage';
-import { MusicPage } from './MusicPage';
-import { SettingsPage } from './SettingsPage';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { ImmersiveHelper } from '../common/utils/ImmersiveHelper';
-import {
-  BangumiDetailParam,
-  DynamicDetailParam,
-  FavoriteDetailParam,
-  LiveRoomParam,
-  TopicFeedParam,
-  UserSpaceParam
-} from './RouteParams';
 import { winUtils } from '../services/appearance/WinUtils';
 import { IndexViewModel } from '../viewmodel/IndexViewModel';
 
@@ -84,118 +55,12 @@ struct Index {
   });
 
   aboutToAppear(): void {
-    NavService.register(this.navStack);
+    Route.register(this.navStack);
   }
 
   @Builder
-  pageMap(name: string, param: Object) {
-    if (name === RouteNames.VIDEO_DETAIL) {
-      NavDestination() {
-        VideoDetailPage({ bvid: param as string })
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.SEARCH) {
-      NavDestination() {
-        SearchPage()
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.VIDEO_FULLSCREEN) {
-      NavDestination() {
-        VideoFullscreenPage({ playerId: param as string })
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.LOGIN) {
-      NavDestination() {
-        LoginPage()
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.SEARCH_RESULT) {
-      NavDestination() {
-        SearchResultPage({ keyword: param as string })
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.LIVE) {
-      NavDestination() {
-        LivePage()
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.LIVE_ROOM) {
-      NavDestination() {
-        LiveRoomPage({ roomId: (param as LiveRoomParam).roomId, title: (param as LiveRoomParam).title })
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.FAVORITES) {
-      NavDestination() {
-        FavoritesPage()
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.FAVORITE_DETAIL) {
-      NavDestination() {
-        FavoriteDetailPage({
-          mediaId: (param as FavoriteDetailParam).mediaId,
-          title: (param as FavoriteDetailParam).title
-        })
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.HISTORY) {
-      NavDestination() {
-        HistoryPage()
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.WATCH_LATER) {
-      NavDestination() {
-        WatchLaterPage()
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.USER_SPACE) {
-      NavDestination() {
-        UserSpacePage({ mid: (param as UserSpaceParam).mid })
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.DYNAMIC_DETAIL) {
-      NavDestination() {
-        DynamicDetailPage({ dynId: (param as DynamicDetailParam).id })
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.PUBLISH_DYNAMIC) {
-      NavDestination() {
-        PublishDynamicPage()
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.TOPIC) {
-      NavDestination() {
-        TopicPage()
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.TOPIC_FEED) {
-      NavDestination() {
-        TopicFeedPage({
-          topicId: (param as TopicFeedParam).topicId,
-          topicName: (param as TopicFeedParam).topicName
-        })
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.BANGUMI) {
-      NavDestination() {
-        BangumiPage()
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.BANGUMI_DETAIL) {
-      NavDestination() {
-        BangumiDetailPage({ seasonId: (param as BangumiDetailParam).seasonId })
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.MUSIC) {
-      NavDestination() {
-        MusicPage()
-      }
-      .hideTitleBar(true)
-    } else if (name === RouteNames.SETTINGS) {
-      NavDestination() {
-        SettingsPage()
-      }
-      .hideTitleBar(true)
-    }
+  routeBuilder(name: string, param: Object) {
+    Route.get(name)?.builder(param)
   }
 
   build() {
@@ -256,7 +121,7 @@ struct Index {
     })
     .padding({ top: this.topRectHeight })
     .hideTitleBar(true)
-    .navDestination(this.pageMap)
+    .navDestination(this.routeBuilder)
     .mode(NavigationMode.Stack)
   }
 
@@ -289,7 +154,7 @@ struct Index {
       })
     }
     .hideTitleBar(true)
-    .navDestination(this.pageMap)
+    .navDestination(this.routeBuilder)
     .mode(NavigationMode.Stack)
   }
 

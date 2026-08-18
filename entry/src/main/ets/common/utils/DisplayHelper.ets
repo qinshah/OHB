@@ -2,7 +2,7 @@
 import { window } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { Logger } from './Logger';
-import { RouteNames } from '../../pages/RouteNames';
+import { Route } from '../../framework/Route';
 
 /**
  * DisplayHelper
@@ -56,7 +56,7 @@ export class DisplayHelper {
     if (DisplayHelper.win === null || !DisplayHelper.pInitialized) {
       return;
     }
-    DisplayHelper._fullscreen = name === RouteNames.VIDEO_FULLSCREEN
+    DisplayHelper._fullscreen = name === Route.videoFullscreen.name
     // 其它任何页面：退出全屏并恢复竖屏
     if (!DisplayHelper._fullscreen) {
       await DisplayHelper.exitAppFullscreen();
@@ -101,7 +101,7 @@ export class DisplayHelper {
     }
     try {
       await DisplayHelper.win.setPreferredOrientation(window.Orientation.UNSPECIFIED);
-      await DisplayHelper.win.setWindowLayoutFullScreen(false);
+      // await DisplayHelper.win.setWindowLayoutFullScreen(false);
       await DisplayHelper.win.setWindowSystemBarEnable(['status', 'navigation']);
       DisplayHelper.pLandscape = false;
     } catch (e) {

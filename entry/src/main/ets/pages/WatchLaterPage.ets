@@ -1,10 +1,9 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { HistoryItem } from '../models/HistoryModels';
 import { WatchLaterViewModel } from '../viewmodel/WatchLaterViewModel';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 
 /**
  * 稍后再看页（P2 Task 16）：列表、移除、清空。
@@ -25,7 +24,7 @@ export struct WatchLaterPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text('稍后再看')
           .fontSize(17)
@@ -103,7 +102,7 @@ export struct WatchLaterPage {
               .backgroundColor(AppColors.CARD_BG)
               .borderRadius(10)
               .onClick(() => {
-                NavService.push(RouteNames.VIDEO_DETAIL, item.bvid);
+                Route.push(Route.videoDetail, item.bvid);
               })
             }
           }, (item: HistoryItem) => `${item.aid}`)

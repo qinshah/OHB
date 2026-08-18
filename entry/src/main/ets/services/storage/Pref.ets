@@ -53,8 +53,8 @@ export class PrefItem<T extends preferences.ValueType> {
     this.onChange = props.onChange;
     prefRegistry.push(this);
     if (this.needInit) {
-      p ??= preferences.getPreferencesSync(ContextUtil.context, { name: PREFS_NAME })
-      this.onChange(this.get());
+      // p ??= preferences.getPreferencesSync(ContextUtil.context, { name: PREFS_NAME })
+      // this.onChange(this.get());
     }
   }
 

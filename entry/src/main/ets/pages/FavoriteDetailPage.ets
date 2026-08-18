@@ -1,11 +1,10 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { FormatUtils } from '../common/utils/FormatUtils';
 import { FavoriteMedia } from '../models/FavoriteModels';
 import { FavoriteViewModel } from '../viewmodel/FavoriteViewModel';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 
 /**
  * 收藏夹详情（P2 Task 16）：收藏内视频分页、移除、跳转视频页。
@@ -28,7 +27,7 @@ export struct FavoriteDetailPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text(this.title)
           .fontSize(17)
@@ -139,7 +138,7 @@ export struct FavoriteDetailPage {
     .backgroundColor(AppColors.CARD_BG)
     .borderRadius(10)
     .onClick(() => {
-      NavService.push(RouteNames.VIDEO_DETAIL, media.bvid);
+      Route.push(Route.videoDetail, media.bvid);
     })
   }
 }

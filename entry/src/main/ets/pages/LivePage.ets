@@ -1,11 +1,10 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { FormatUtils } from '../common/utils/FormatUtils';
 import { LiveArea, LiveRoom } from '../models/LiveModels';
 import { LiveViewModel } from '../viewmodel/LiveViewModel';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 import { LiveRoomParam } from './RouteParams';
 
 /**
@@ -29,7 +28,7 @@ export struct LivePage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text('直播')
           .fontSize(17)
@@ -160,7 +159,7 @@ export struct LivePage {
     .borderRadius(10)
     .onClick(() => {
       const p: LiveRoomParam = { roomId: room.roomId, title: room.title };
-      NavService.push(RouteNames.LIVE_ROOM, p);
+      Route.push(Route.liveRoom, p);
     })
   }
 }

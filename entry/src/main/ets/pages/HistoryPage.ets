@@ -1,11 +1,10 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { FormatUtils } from '../common/utils/FormatUtils';
 import { HistoryItem } from '../models/HistoryModels';
 import { HistoryViewModel } from '../viewmodel/HistoryViewModel';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 
 /**
  * 历史记录页（P2 Task 16）：游标分页、删除、清空。
@@ -26,7 +25,7 @@ export struct HistoryPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text('历史记录')
           .fontSize(17)
@@ -130,7 +129,7 @@ export struct HistoryPage {
     .backgroundColor(AppColors.CARD_BG)
     .borderRadius(10)
     .onClick(() => {
-      NavService.push(RouteNames.VIDEO_DETAIL, item.bvid);
+      Route.push(Route.videoDetail, item.bvid);
     })
   }
 }

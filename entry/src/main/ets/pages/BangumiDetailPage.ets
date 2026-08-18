@@ -1,5 +1,5 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { FormatUtils } from '../common/utils/FormatUtils';
 import { BangumiDetail, BangumiEpisode, BangumiItem } from '../models/BangumiModels';
 import { BangumiDetailViewModel } from '../viewmodel/BangumiDetailViewModel';
@@ -77,7 +77,7 @@ export struct BangumiDetailPage {
         .backgroundColor('#66000000')
         .position({ x: 8, y: 8 })
         .onClick(() => {
-          NavService.pop();
+          Route.pop();
         })
 
         // 播放控制

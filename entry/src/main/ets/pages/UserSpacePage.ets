@@ -1,5 +1,5 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { FormatUtils } from '../common/utils/FormatUtils';
 import { DynamicItem, DynamicKind } from '../models/DynamicItem';
 import { FavoriteFolder } from '../models/FavoriteModels';
@@ -7,7 +7,6 @@ import { UserArchiveItem, UserSpaceInfo } from '../models/UserSpaceModels';
 import { UserSpaceViewModel } from '../viewmodel/UserSpaceViewModel';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 import { DynamicDetailParam, FavoriteDetailParam } from './RouteParams';
 
 /**
@@ -33,7 +32,7 @@ export struct UserSpacePage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text(this.vm.info?.name ?? '用户主页')
           .fontSize(17)
@@ -242,7 +241,7 @@ export struct UserSpacePage {
     .backgroundColor(AppColors.CARD_BG)
     .borderRadius(10)
     .onClick(() => {
-      NavService.push(RouteNames.VIDEO_DETAIL, item.bvid);
+      Route.push(Route.videoDetail, item.bvid);
     })
   }
 
@@ -301,7 +300,7 @@ export struct UserSpacePage {
         }
         .width('100%')
         .onClick(() => {
-          NavService.push(RouteNames.VIDEO_DETAIL, item.videoBvid);
+          Route.push(Route.videoDetail, item.videoBvid);
         })
       }
       if (item.images.length > 0) {
@@ -329,7 +328,7 @@ export struct UserSpacePage {
     .borderRadius(10)
     .onClick(() => {
       const p: DynamicDetailParam = { id: item.idStr };
-      NavService.push(RouteNames.DYNAMIC_DETAIL, p);
+      Route.push(Route.dynamicDetail, p);
     })
   }
 
@@ -371,7 +370,7 @@ export struct UserSpacePage {
               .borderRadius(10)
               .onClick(() => {
                 const p: FavoriteDetailParam = { mediaId: folder.id, title: folder.title };
-                NavService.push(RouteNames.FAVORITE_DETAIL, p);
+                Route.push(Route.favoriteDetail, p);
               })
             }
           }, (folder: FavoriteFolder) => `${folder.id}`)

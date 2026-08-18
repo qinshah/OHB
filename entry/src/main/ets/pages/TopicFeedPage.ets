@@ -1,11 +1,10 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { FormatUtils } from '../common/utils/FormatUtils';
 import { TopicFeedCard } from '../models/TopicModels';
 import { TopicViewModel } from '../viewmodel/TopicViewModel';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 import { DynamicDetailParam } from './RouteParams';
 
 /**
@@ -29,7 +28,7 @@ export struct TopicFeedPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text(`# ${this.topicName}`)
           .fontSize(17)
@@ -153,10 +152,10 @@ export struct TopicFeedPage {
     .borderRadius(10)
     .onClick(() => {
       if (card.videoBvid.length > 0) {
-        NavService.push(RouteNames.VIDEO_DETAIL, card.videoBvid);
+        Route.push(Route.videoDetail, card.videoBvid);
       } else {
         const p: DynamicDetailParam = { id: card.idStr };
-        NavService.push(RouteNames.DYNAMIC_DETAIL, p);
+        Route.push(Route.dynamicDetail, p);
       }
     })
   }

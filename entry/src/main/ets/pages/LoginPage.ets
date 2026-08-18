@@ -1,5 +1,5 @@
 import { LoginViewModel } from '../viewmodel/LoginViewModel';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { AppColors } from '../theme/AppTheme';
 
 /**
@@ -13,7 +13,7 @@ export struct LoginPage {
     this.vm.setOnSuccess(() => {
       // 登录成功稍作停留后返回
       setTimeout(() => {
-        NavService.pop();
+        Route.pop();
       }, 800);
     });
     this.vm.start();
@@ -32,7 +32,7 @@ export struct LoginPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text('扫码登录')
           .fontSize(17)

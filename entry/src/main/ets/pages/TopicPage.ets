@@ -1,10 +1,9 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { TopicItem } from '../models/TopicModels';
 import { TopicViewModel } from '../viewmodel/TopicViewModel';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 import { TopicFeedParam } from './RouteParams';
 
 /**
@@ -26,7 +25,7 @@ export struct TopicPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text('话题广场')
           .fontSize(17)
@@ -94,7 +93,7 @@ export struct TopicPage {
               .borderRadius(10)
               .onClick(() => {
                 const p: TopicFeedParam = { topicId: topic.topicId, topicName: topic.topicName };
-                NavService.push(RouteNames.TOPIC_FEED, p);
+                Route.push(Route.topicFeed, p);
               })
             }
           }, (topic: TopicItem) => `${topic.topicId}`)

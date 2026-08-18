@@ -1,11 +1,10 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { FormatUtils } from '../common/utils/FormatUtils';
 import { DynamicItem, DynamicKind } from '../models/DynamicItem';
 import { DynamicViewModel } from '../viewmodel/DynamicViewModel';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 import { DynamicDetailParam, UserSpaceParam } from './RouteParams';
 import { IndexViewModel } from '../viewmodel/IndexViewModel';
 
@@ -43,7 +42,7 @@ export struct DynamicPage {
           .borderRadius(12)
           .border({ width: 1, color: AppColors.DIVIDER })
           .onClick(() => {
-            NavService.push(RouteNames.TOPIC);
+            Route.push(Route.topic);
           })
         Text('发布')
           .fontSize(13)
@@ -58,7 +57,7 @@ export struct DynamicPage {
           })
           .margin({ left: 8 })
           .onClick(() => {
-            NavService.push(RouteNames.PUBLISH_DYNAMIC);
+            Route.push(Route.publishDynamic);
           })
       }
       .width('100%')
@@ -81,7 +80,7 @@ export struct DynamicPage {
             .backgroundColor(AppColors.BRAND)
             .fontColor(Color.White)
             .onClick(() => {
-              NavService.push(RouteNames.LOGIN);
+              Route.push(Route.login);
             })
         }
         .layoutWeight(1)
@@ -142,7 +141,7 @@ export struct DynamicPage {
           .alt($r('app.media.startIcon'))
           .onClick(() => {
             const p: UserSpaceParam = { mid: item.upMid };
-            NavService.push(RouteNames.USER_SPACE, p);
+            Route.push(Route.userSpace, p);
           })
         Column({ space: 2 }) {
           Text(item.upName)
@@ -159,7 +158,7 @@ export struct DynamicPage {
       .width('100%')
       .onClick(() => {
         const p: DynamicDetailParam = { id: item.idStr };
-        NavService.push(RouteNames.DYNAMIC_DETAIL, p);
+        Route.push(Route.dynamicDetail, p);
       })
 
       // 文本内容
@@ -212,7 +211,7 @@ export struct DynamicPage {
         .width('100%')
         .alignItems(HorizontalAlign.Start)
         .onClick(() => {
-          NavService.push(RouteNames.VIDEO_DETAIL, item.videoBvid);
+          Route.push(Route.videoDetail, item.videoBvid);
         })
       }
 

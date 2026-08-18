@@ -1,4 +1,4 @@
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { DanmakuMessage } from '../models/LiveModels';
 import { LiveRoomViewModel } from '../viewmodel/LiveRoomViewModel';
 import { Player } from '../player/Player';
@@ -86,7 +86,7 @@ export struct LiveRoomPage {
             .fontColor([Color.White])
             .padding(6)
             .onClick(() => {
-              NavService.pop();
+              Route.pop();
             })
           Text(this.vm.playInfo?.title ?? this.title)
             .fontSize(14)

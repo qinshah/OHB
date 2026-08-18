@@ -1,6 +1,6 @@
 // [API 23+] 视频详情页
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { FormatUtils } from '../common/utils/FormatUtils';
 import { VideoDetailVM } from '../viewmodel/VideoDetailVM';
 import { ErrorView, LoadingView } from '../common/components/StateViews';
@@ -12,7 +12,6 @@ import { VideoCard } from '../models/VideoCard';
 import { VideoCardView } from '../common/components/VideoCardView';
 import { common } from '@kit.AbilityKit';
 import { UserSpaceParam } from './RouteParams';
-import { RouteNames } from './RouteNames';
 
 /**
  * 视频详情页（TabView 布局）
@@ -52,94 +51,96 @@ export struct VideoDetailPage {
   }
 
   build() {
-    Column() {
-      // ===== 播放区 =====
-      Stack() {
-        if (!this.vm.playerVM.fullscreen) {
-          XComponent({
-            type: XComponentType.SURFACE,
-            controller: this.xcController
-          })
-            .onLoad(() => {
-              this.vm.bindXComponent(this.xcController.getXComponentSurfaceId())
+    NavDestination() {
+      Column() {
+        // ===== 播放区 =====
+        Stack() {
+          if (!this.vm.playerVM.fullscreen) {
+            XComponent({
+              type: XComponentType.SURFACE,
+              controller: this.xcController
             })
+              .onLoad(() => {
+                this.vm.bindXComponent(this.xcController.getXComponentSurfaceId())
+              })
+              .width('100%')
+              .height('100%')
+              .backgroundColor(Color.Black)
+          }
+
+          // 控制层
+          PlayerControlView({ playerId: this.bvid })
             .width('100%')
             .height('100%')
-            .backgroundColor(Color.Black)
-        }
 
-        // 控制层
-        PlayerControlView({ playerId: this.bvid })
-          .width('100%')
-          .height('100%')
-
-        // 播放地址错误覆盖层
-        if (this.vm.playError.length > 0) {
-          Column({ space: 10 }) {
-            Text(this.vm.playError)
-              .fontSize(13)
-              .fontColor(Color.White)
-            Button('重试')
-              .backgroundColor(AppColors.BRAND)
-              .fontColor(Color.White)
-              .onClick(() => {
-                this.vm.retryPlayUrl();
-              })
+          // 播放地址错误覆盖层
+          if (this.vm.playError.length > 0) {
+            Column({ space: 10 }) {
+              Text(this.vm.playError)
+                .fontSize(13)
+                .fontColor(Color.White)
+              Button('重试')
+                .backgroundColor(AppColors.BRAND)
+                .fontColor(Color.White)
+                .onClick(() => {
+                  this.vm.retryPlayUrl();
+                })
+            }
+            .width('100%')
+            .height('100%')
+            .backgroundColor('#B3000000')
+            .justifyContent(FlexAlign.Center)
           }
-          .width('100%')
-          .height('100%')
-          .backgroundColor('#B3000000')
-          .justifyContent(FlexAlign.Center)
-        }
 
-        // 返回键
-        Stack() {
-          SymbolGlyph($r('sys.symbol.chevron_left'))
-            .fontSize(22)
-            .fontColor([Color.White])
-            .padding(8)
+          // 返回键
+          Stack() {
+            SymbolGlyph($r('sys.symbol.chevron_left'))
+              .fontSize(22)
+              .fontColor([Color.White])
+              .padding(8)
+          }
+          .width(40)
+          .height(40)
+          .borderRadius(20)
+          .backgroundColor('#66000000')
+          .position({ x: 8, y: 8 })
+          .hitTestBehavior(HitTestMode.Block)
+          .onClick(() => {
+            Route.pop();
+          })
         }
-        .width(40)
-        .height(40)
-        .borderRadius(20)
-        .backgroundColor('#66000000')
-        .position({ x: 8, y: 8 })
-        .hitTestBehavior(HitTestMode.Block)
-        .onClick(() => {
-          NavService.pop();
+        .width('100%')
+        .aspectRatio(this.vm.playerVM.aspectRatio > 0 ? this.vm.playerVM.aspectRatio : 16 / 9)
+        .backgroundColor(Color.Black)
+
+        // ===== Tabs：推荐 / 评论 =====
+        Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
+          TabContent() {
+            this.RelatedTab()
+          }
+          .tabBar(this.tabBarItem(0, '推荐', ''))
+
+          TabContent() {
+            this.CommentTab()
+          }
+          .tabBar(
+            this.tabBarItem(1, '评论', ` ${FormatUtils.count(this.vm.detail?.reply ?? 0)}`))
+        }
+        .barWidth('100%')
+        .barHeight(44)
+        .barBackgroundColor(AppColors.PAGE_BG)
+        .onChange((index: number) => {
+          this.currentTab = index;
+          if (index === 1 && !this.commentLoaded) {
+            this.loadComment();
+          }
         })
+        .layoutWeight(1)
       }
       .width('100%')
-      .aspectRatio(this.vm.playerVM.aspectRatio > 0 ? this.vm.playerVM.aspectRatio : 16 / 9)
-      .backgroundColor(Color.Black)
-
-      // ===== Tabs：推荐 / 评论 =====
-      Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
-        TabContent() {
-          this.RelatedTab()
-        }
-        .tabBar(this.tabBarItem(0, '推荐', ''))
-
-        TabContent() {
-          this.CommentTab()
-        }
-        .tabBar(
-          this.tabBarItem(1, '评论', ` ${FormatUtils.count(this.vm.detail?.reply ?? 0)}`))
-      }
-      .barWidth('100%')
-      .barHeight(44)
-      .barBackgroundColor(AppColors.PAGE_BG)
-      .onChange((index: number) => {
-        this.currentTab = index;
-        if (index === 1 && !this.commentLoaded) {
-          this.loadComment();
-        }
-      })
-      .layoutWeight(1)
+      .height('100%')
+      .backgroundColor(AppColors.PAGE_BG)
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(AppColors.PAGE_BG)
   }
 
   @Builder
@@ -189,7 +190,7 @@ export struct VideoDetailPage {
             const d = this.vm.detail;
             if (d !== null) {
               const p: UserSpaceParam = { mid: d.ownerMid };
-              NavService.push(RouteNames.USER_SPACE, p);
+              Route.push(Route.userSpace, p);
             }
           })
         Text(this.vm.detail!.ownerName)
@@ -200,7 +201,7 @@ export struct VideoDetailPage {
             const d = this.vm.detail;
             if (d !== null) {
               const p: UserSpaceParam = { mid: d.ownerMid };
-              NavService.push(RouteNames.USER_SPACE, p);
+              Route.push(Route.userSpace, p);
             }
           })
       }
@@ -343,7 +344,7 @@ export struct VideoDetailPage {
                 VideoCardView({
                   card: item,
                   onCardClick: (bvid: string) => {
-                    NavService.push(RouteNames.VIDEO_DETAIL, bvid);
+                    Route.push(Route.videoDetail, bvid);
                   }
                 })
               }

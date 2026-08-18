@@ -2,7 +2,7 @@
 import { Player } from '../player/Player';
 import { PlayerRepository } from '../repository/PlayerRepository';
 import { DisplayHelper } from '../common/utils/DisplayHelper';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { PlayerControlView } from '../components/PlayerControlView';
 import { Logger } from '../common/utils/Logger';
 
@@ -76,7 +76,7 @@ export struct VideoFullscreenPage {
       .backgroundColor('#66000000')
       .position({ x: 12, y: 12 })
       .onClick(() => {
-        NavService.pop();
+        Route.pop();
       })
     }
     .width('100%')

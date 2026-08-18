@@ -1,9 +1,8 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { HotSearchItem } from '../models/SearchModels';
 import { SearchViewModel } from '../viewmodel/SearchViewModel';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 
 /**
  * 搜索首页（Task 7）：搜索框 + 建议联想 + 热搜 + 历史。
@@ -189,6 +188,6 @@ export struct SearchPage {
     if (kw.length === 0) {
       return;
     }
-    NavService.push(RouteNames.SEARCH_RESULT, kw);
+    Route.push(Route.searchResult, kw);
   }
 }

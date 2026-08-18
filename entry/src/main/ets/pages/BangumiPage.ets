@@ -1,10 +1,9 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { BangumiItem } from '../models/BangumiModels';
 import { BangumiViewModel } from '../viewmodel/BangumiViewModel';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 import { BangumiDetailParam } from './RouteParams';
 
 /** 排序选项 */
@@ -41,7 +40,7 @@ export struct BangumiPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text('番剧')
           .fontSize(17)
@@ -211,7 +210,7 @@ export struct BangumiPage {
     .borderRadius(10)
     .onClick(() => {
       const p: BangumiDetailParam = { seasonId: item.seasonId };
-      NavService.push(RouteNames.BANGUMI_DETAIL, p);
+      Route.push(Route.bangumiDetail, p);
     })
   }
 }

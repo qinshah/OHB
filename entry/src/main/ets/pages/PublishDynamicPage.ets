@@ -1,4 +1,4 @@
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { PublishDynamicViewModel } from '../player/PublishDynamicViewModel';
 import { AppColors } from '../theme/AppTheme';
 
@@ -18,7 +18,7 @@ export struct PublishDynamicPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text('发布动态')
           .fontSize(17)
@@ -69,7 +69,7 @@ export struct PublishDynamicPage {
           .backgroundColor(AppColors.CARD_BG)
           .fontColor(AppColors.TEXT_PRIMARY)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
       }
 

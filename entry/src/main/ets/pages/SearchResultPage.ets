@@ -1,5 +1,5 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { FormatUtils } from '../common/utils/FormatUtils';
 import { SearchRow, SearchRowKind, SearchType } from '../models/SearchModels';
 import { VideoCard } from '../models/VideoCard';
@@ -7,7 +7,6 @@ import { SearchViewModel } from '../viewmodel/SearchViewModel';
 import { VideoCardView } from '../common/components/VideoCardView';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 import { BangumiDetailParam, LiveRoomParam, UserSpaceParam } from './RouteParams';
 
 /** 排序选项 */
@@ -94,7 +93,7 @@ export struct SearchResultPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text(`"${this.keyword}" 的搜索结果`)
           .fontSize(17)
@@ -216,7 +215,7 @@ export struct SearchResultPage {
       VideoCardView({
         card: SearchResultPage.rowToVideoCard(row),
         onCardClick: (bvid: string) => {
-          NavService.push(RouteNames.VIDEO_DETAIL, bvid);
+          Route.push(Route.videoDetail, bvid);
         }
       })
     } else if (row.kind === SearchRowKind.User) {
@@ -241,7 +240,7 @@ export struct SearchResultPage {
       .borderRadius(8)
       .onClick(() => {
         const p: UserSpaceParam = { mid: row.mid };
-        NavService.push(RouteNames.USER_SPACE, p);
+        Route.push(Route.userSpace, p);
       })
     } else if (row.kind === SearchRowKind.Live) {
       Column({ space: 4 }) {
@@ -276,7 +275,7 @@ export struct SearchResultPage {
       .padding(4)
       .onClick(() => {
         const p: LiveRoomParam = { roomId: row.roomid, title: row.title };
-        NavService.push(RouteNames.LIVE_ROOM, p);
+        Route.push(Route.liveRoom, p);
       })
     } else {
       Column({ space: 4 }) {
@@ -313,7 +312,7 @@ export struct SearchResultPage {
       .onClick(() => {
         if (row.kind === SearchRowKind.Bangumi && row.mediaId > 0) {
           const p: BangumiDetailParam = { seasonId: row.mediaId };
-          NavService.push(RouteNames.BANGUMI_DETAIL, p);
+          Route.push(Route.bangumiDetail, p);
         }
       })
     }

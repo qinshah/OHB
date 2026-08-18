@@ -1,8 +1,7 @@
 import { AccountProfile } from '../models/LoginModels';
-import { NavService } from '../common/navigation/NavService';
+import { Route, RoutePage } from '../framework/Route';
 import { MineViewModel } from '../viewmodel/MineViewModel';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 
 /**
  * 我的页（Task 4/10）：当前账户、多账户列表与切换、退出登录。
@@ -63,7 +62,7 @@ export struct MinePage {
               .backgroundColor(AppColors.BRAND)
               .fontColor(Color.White)
               .onClick(() => {
-                NavService.push(RouteNames.LOGIN);
+                Route.push(Route.login);
               })
           }
           .width('100%')
@@ -128,7 +127,7 @@ export struct MinePage {
               .backgroundColor(AppColors.CARD_BG)
               .borderRadius(10)
               .onClick(() => {
-                NavService.push(RouteNames.LOGIN);
+                Route.push(Route.login);
               })
           }
           .width('100%')
@@ -157,10 +156,10 @@ export struct MinePage {
                 .backgroundColor(AppColors.CARD_BG)
                 .borderRadius(10)
                 .onClick(() => {
-                  NavService.push(entry.route, entry.param);
+                  Route.push(entry.route, entry.param);
                 })
               }
-            }, (entry: MineFeatureEntry) => entry.route)
+            }, (entry: MineFeatureEntry) => entry.route.name)
           }
           .columnsTemplate('1fr 1fr 1fr 1fr')
           .columnsGap(8)
@@ -185,7 +184,7 @@ export struct MinePage {
         .backgroundColor(AppColors.CARD_BG)
         .borderRadius(10)
         .onClick(() => {
-          NavService.push(RouteNames.SETTINGS);
+          Route.push(Route.settings);
         })
 
         Text('OHB · 鸿蒙第三方 Bilibili 客户端 V1')
@@ -208,17 +207,17 @@ export struct MinePage {
 interface MineFeatureEntry {
   label: string;
   icon: string;
-  route: string;
+  route: RoutePage;
   param?: Object;
 }
 
 const FEATURE_ENTRIES: MineFeatureEntry[] = [
-  { label: '直播', icon: '📺', route: RouteNames.LIVE },
-  { label: '番剧', icon: '🎬', route: RouteNames.BANGUMI },
-  { label: '音乐', icon: '🎵', route: RouteNames.MUSIC },
-  { label: '收藏', icon: '⭐', route: RouteNames.FAVORITES },
-  { label: '历史', icon: '🕘', route: RouteNames.HISTORY },
-  { label: '稍后再看', icon: '▶️', route: RouteNames.WATCH_LATER },
-  { label: '发布动态', icon: '✏️', route: RouteNames.PUBLISH_DYNAMIC },
-  { label: '话题广场', icon: '🏷️', route: RouteNames.TOPIC }
+  { label: '直播', icon: '📺', route: Route.live },
+  { label: '番剧', icon: '🎬', route: Route.bangumi },
+  { label: '音乐', icon: '🎵', route: Route.music },
+  { label: '收藏', icon: '⭐', route: Route.favorites },
+  { label: '历史', icon: '🕘', route: Route.history },
+  { label: '稍后再看', icon: '▶️', route: Route.watchLater },
+  { label: '发布动态', icon: '✏️', route: Route.publishDynamic },
+  { label: '话题广场', icon: '🏷️', route: Route.topic }
 ];

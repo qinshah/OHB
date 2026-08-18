@@ -1,11 +1,10 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { VideoCard } from '../models/VideoCard';
 import { MusicViewModel } from '../viewmodel/MusicViewModel';
 import { VideoCardView } from '../common/components/VideoCardView';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 
 /**
  * 音乐页（P2 Task 20）：音乐分区排行，点击进入视频播放（MediaSession 由播放器统一提供）。
@@ -26,7 +25,7 @@ export struct MusicPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text('音乐')
           .fontSize(17)
@@ -59,7 +58,7 @@ export struct MusicPage {
               VideoCardView({
                 card: item,
                 onCardClick: (bvid: string) => {
-                  NavService.push(RouteNames.VIDEO_DETAIL, bvid);
+                  Route.push(Route.videoDetail, bvid);
                 }
               })
             }

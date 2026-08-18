@@ -1,12 +1,11 @@
 import { DataState, DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { FavoriteFolder } from '../models/FavoriteModels';
 import { FavoriteViewModel } from '../viewmodel/FavoriteViewModel';
 import { AccountManager } from '../services/account/AccountManager';
 import { AppError } from '../common/result/AppError';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 import { FavoriteDetailParam } from './RouteParams';
 
 /**
@@ -33,7 +32,7 @@ export struct FavoritesPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text('我的收藏')
           .fontSize(17)
@@ -93,7 +92,7 @@ export struct FavoritesPage {
               .borderRadius(10)
               .onClick(() => {
                 const p: FavoriteDetailParam = { mediaId: folder.id, title: folder.title };
-                NavService.push(RouteNames.FAVORITE_DETAIL, p);
+                Route.push(Route.favoriteDetail, p);
               })
             }
           }, (folder: FavoriteFolder) => `${folder.id}`)

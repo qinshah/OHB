@@ -1,5 +1,5 @@
 import { DataStatus } from '../common/state/DataState';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { FormatUtils } from '../common/utils/FormatUtils';
 import { DynamicKind } from '../models/DynamicItem';
 import { DynamicDetailViewModel } from '../viewmodel/DynamicDetailViewModel';
@@ -7,7 +7,6 @@ import { CommentViewModel } from '../viewmodel/CommentViewModel';
 import { CommentSection } from '../components/CommentSection';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { RouteNames } from './RouteNames';
 import { UserSpaceParam } from './RouteParams';
 
 /**
@@ -32,7 +31,7 @@ export struct DynamicDetailPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text('动态详情')
           .fontSize(17)
@@ -69,7 +68,7 @@ export struct DynamicDetailPage {
                   const item = this.vm.item;
                   if (item !== null) {
                     const p: UserSpaceParam = { mid: item.upMid };
-                    NavService.push(RouteNames.USER_SPACE, p);
+                    Route.push(Route.userSpace, p);
                   }
                 })
               Column({ space: 2 }) {
@@ -143,7 +142,7 @@ export struct DynamicDetailPage {
               .onClick(() => {
                 const item = this.vm.item;
                 if (item !== null && item.videoBvid.length > 0) {
-                  NavService.push(RouteNames.VIDEO_DETAIL, item.videoBvid);
+                  Route.push(Route.videoDetail, item.videoBvid);
                 }
               })
             }

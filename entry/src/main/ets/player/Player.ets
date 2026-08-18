@@ -9,8 +9,7 @@ import { AppConstants } from '../common/constants/AppConstants';
 import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
 import { MediaSessionHelper } from '../services/media/MediaSessionHelper';
 import { avSession } from '@kit.AVSessionKit';
-import { RouteNames } from '../pages/RouteNames';
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import hilog from '@ohos.hilog';
 
 /**
@@ -300,9 +299,9 @@ export class Player {
   toggleFullscreen(): void {
     hilog.debug(0, TAG, `切换全屏前是否全屏：${this._fullscreen}`);
     if (this._fullscreen) {
-      NavService.pop();
+      Route.pop();
     } else {
-      NavService.push(RouteNames.VIDEO_FULLSCREEN, this.id);
+      Route.push(Route.videoFullscreen, this.id);
     }
   }
 

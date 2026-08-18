@@ -1,4 +1,4 @@
-import { NavService } from '../common/navigation/NavService';
+import { Route } from '../framework/Route';
 import { AppColors } from '../theme/AppTheme';
 import { common, ConfigurationConstant, bundleManager } from '@kit.AbilityKit';
 import { systemShare } from '@kit.ShareKit';
@@ -157,7 +157,7 @@ export struct SettingsPage {
           .fontColor(AppColors.TEXT_PRIMARY)
           .width(32)
           .onClick(() => {
-            NavService.pop();
+            Route.pop();
           })
         Text('设置')
           .fontSize(17)
