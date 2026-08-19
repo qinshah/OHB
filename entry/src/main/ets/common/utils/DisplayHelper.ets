@@ -1,5 +1,5 @@
 // [API 23+] 应用窗口全屏与方向管理工具
-import { window } from '@kit.ArkUI';
+import { window, display } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { Logger } from './Logger';
 import { Route } from '../../framework/Route';
@@ -14,6 +14,8 @@ import { Route } from '../../framework/Route';
  * 设计原则：
  * - 视频全屏页（VIDEO_FULLSCREEN）按视频宽高比决定方向（宽高比 > 1.2 视为横向视频）
  *   由 VideoFullscreenPage 加载视频后主动调用 applyFullscreenForVideo(aspect)
+ * - 折叠屏适配（参考官方横竖屏最佳实践）：展开/半展开态大屏保持竖屏全屏，
+ *   仅折叠态/非折叠设备按视频宽高比旋转
  * - 其它页面（VIDEO_DETAIL / LOGIN / SEARCH_RESULT / Tab 根页）一律退出全屏并恢复竖屏
  * - 非页面级路由变化（isPage=false）不做处理
  *
@@ -65,19 +67,38 @@ export class DisplayHelper {
 
   /**
    * 视频全屏页加载视频后调用：
+   * - 折叠屏展开/半展开态：大屏保持竖屏全屏（参考官方横竖屏最佳实践）
    * - 宽高比 > 1.2 视为横向视频 → 应用窗口全屏 + 横向锁定
    * - 否则视为竖屏视频 → 仅应用窗口全屏，保持竖屏
    */
   static async applyFullscreenForVideo(aspectRatio: number): Promise<void> {
     try {
       await DisplayHelper.enterAppFullscreen();
-      if (aspectRatio > 1.2) {
+      if (DisplayHelper.isExpandedOrHalfFolded()) {
+        // 折叠屏展开态：大屏竖屏全屏即可，不旋转
+        await DisplayHelper.setPortrait();
+      } else if (aspectRatio > 1.2) {
         await DisplayHelper.setLandscape();
       } else {
         await DisplayHelper.setPortrait();
       }
     } catch (e) {
       Logger.error('Display', `applyFullscreenForVideo fail: ${JSON.stringify(e)}`);
+    }
+  }
+
+  /**
+   * 是否处于折叠屏展开/半展开态（参考官方 WindowUtils 实现）。
+   * 非折叠设备或查询失败返回 false。
+   */
+  private static isExpandedOrHalfFolded(): boolean {
+    try {
+      const fold = display.getFoldStatus();
+      return fold === display.FoldStatus.FOLD_STATUS_EXPANDED ||
+        fold === display.FoldStatus.FOLD_STATUS_HALF_FOLDED;
+    } catch (e) {
+      Logger.error('Display', `getFoldStatus fail: ${JSON.stringify(e)}`);
+      return false;
     }
   }
 

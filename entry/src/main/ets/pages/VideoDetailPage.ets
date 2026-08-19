@@ -12,10 +12,11 @@ import { VideoCard } from '../models/VideoCard';
 import { VideoCardView } from '../common/components/VideoCardView';
 import { common } from '@kit.AbilityKit';
 import { UserSpaceParam } from './RouteParams';
+import { VideoNodeController } from '../player/VideoNodeController';
 
 /**
  * 视频详情页（TabView 布局）
- * - 播放区固定顶部
+ * - 播放区固定顶部（视频渲染节点经 VideoNodeController 管理，可与全屏页共享迁移）
  * - 详情头部（标题/UP/互动/简介/分P）固定在 Tabs 上方
  * - Tabs 切换「推荐」与「评论」
  */
@@ -26,7 +27,8 @@ export struct VideoDetailPage {
   @State descExpanded: boolean = false;
   @State commentLoaded: boolean = false;
   @State currentTab: number = 0;
-  private xcController: XComponentController = new XComponentController();
+  /** 视频渲染节点控制器：与全屏页共享同一 XComponent 节点（Surface 不销毁） */
+  @State nodeController: VideoNodeController = VideoNodeController.get(this.bvid);
   /** 评论 ViewModel（type=1 视频评论） */
   @State commentVm: CommentViewModel = new CommentViewModel();
 
@@ -48,6 +50,8 @@ export struct VideoDetailPage {
     this.vm.playerVM.setSystemVolumeChange(null);
     this.vm.playerVM.detachMediaSession();
     this.vm.release();
+    // 页面彻底关闭：销毁渲染节点并注销控制器（全屏页此时已归还节点）
+    VideoNodeController.remove(this.bvid);
   }
 
   build() {
@@ -55,18 +59,10 @@ export struct VideoDetailPage {
       Column() {
         // ===== 播放区 =====
         Stack() {
-          if (!this.vm.playerVM.fullscreen) {
-            XComponent({
-              type: XComponentType.SURFACE,
-              controller: this.xcController
-            })
-              .onLoad(() => {
-                this.vm.bindXComponent(this.xcController.getXComponentSurfaceId())
-              })
-              .width('100%')
-              .height('100%')
-              .backgroundColor(Color.Black)
-          }
+          // 渲染节点容器：与全屏页共享同一节点，全屏切换时节点迁移、Surface 不销毁
+          NodeContainer(this.nodeController)
+            .width('100%')
+            .height('100%')
 
           // 控制层
           PlayerControlView({ playerId: this.bvid })
@@ -141,6 +137,10 @@ export struct VideoDetailPage {
       .height('100%')
       .backgroundColor(AppColors.PAGE_BG)
     }
+    // 从全屏页返回时兜底恢复视频节点（正常路径由全屏页 aboutToDisappear 触发，幂等）
+    .onShown(() => {
+      this.nodeController.restoreToHost();
+    })
   }
 
   @Builder

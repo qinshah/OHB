@@ -10,6 +10,7 @@ import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
 import { MediaSessionHelper } from '../services/media/MediaSessionHelper';
 import { avSession } from '@kit.AVSessionKit';
 import { Route } from '../framework/Route';
+import { VideoNodeController } from './VideoNodeController';
 import hilog from '@ohos.hilog';
 
 /**
@@ -295,14 +296,30 @@ export class Player {
     await this.engine.setSpeed(speed);
   }
 
-  /** UI 触发全屏切换：以本播放器 id 作为路由参数，全屏页经 PlayerRepository.get(id) 获取同一实例 */
+  /**
+   * UI 触发全屏切换（节点迁移方案）：
+   * - 进入全屏：push 全屏路由后，立即将视频渲染节点从详情页移除；
+   *   全屏页 NodeContainer 创建时经 makeNode 取走同一节点（Surface 不销毁，播放零中断）
+   * - 退出全屏：pop 路由；全屏页销毁时经 restoreToHost 把节点归还详情页
+   */
   toggleFullscreen(): void {
     hilog.debug(0, TAG, `切换全屏前是否全屏：${this._fullscreen}`);
     if (this._fullscreen) {
       Route.pop();
     } else {
       Route.push(Route.videoFullscreen, this.id);
+      // 节点迁移第一步：从详情页移除（防止转场动画期间双视频穿帮）
+      VideoNodeController.get(this.id).hideFromCurrentHost();
     }
+  }
+
+  /**
+   * 全屏状态标记（由 VideoFullscreenPage 生命周期维护：
+   * aboutToAppear 置 true / aboutToDisappear 置 false）。
+   * 修复点：此前该状态从未被设置，导致详情页条件渲染失效、Surface 冲突。
+   */
+  markFullscreen(v: boolean): void {
+    this._fullscreen = v;
   }
 
   /** 播放请求头（B站防盗链） */

@@ -14,14 +14,11 @@ import { Pref } from '../services/storage/Pref';
  * 播放器实例由 PlayerRepository 统一管理（静态单例，key=bvid）：
  * - 详情页（VideoDetailPage）经 attachPlayer(bvid) 创建/复用播放器
  * - 全屏页（VideoFullscreenPage）经 PlayerRepository.get(bvid) 访问同一实例播放
- * - 全屏期间视频页条件渲染不挂载 XComponent；退出全屏后由 onLoad 重建 surface
+ * - 视频渲染节点由 VideoNodeController 管理：详情页与全屏页共享同一 XComponent，
+ *   Surface 绑定在 VideoPlayerNode.onLoad 中完成（本 VM 不再经手 surface）
  */
 @Observed
 export class VideoDetailVM {
-  bindXComponent(id: string) {
-    this.playerVM.bindSurface(id)
-  }
-
   detailState: DataState<VideoDetail> = DataState.idle<VideoDetail>();
   detail: VideoDetail | null = null;
   playUrlInfo: PlayUrlInfo | null = null;
