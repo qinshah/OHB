@@ -89,10 +89,15 @@ export class DisplayHelper {
 
   /**
    * 是否处于折叠屏展开/半展开态（参考官方 WindowUtils 实现）。
-   * 非折叠设备或查询失败返回 false。
+   * 必须先经 isFoldable() 判断是折叠屏设备——部分非折叠设备
+   * getFoldStatus() 也会返回 EXPANDED，直接判断会误入"大屏保持竖屏"分支，
+   * 导致全屏永不横屏（本次修复的回归点）。
    */
   private static isExpandedOrHalfFolded(): boolean {
     try {
+      if (!display.isFoldable()) {
+        return false; // 非折叠屏设备：一律按视频宽高比决定方向
+      }
       const fold = display.getFoldStatus();
       return fold === display.FoldStatus.FOLD_STATUS_EXPANDED ||
         fold === display.FoldStatus.FOLD_STATUS_HALF_FOLDED;

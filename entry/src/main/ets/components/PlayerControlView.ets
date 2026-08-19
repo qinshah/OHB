@@ -65,6 +65,11 @@ export struct PlayerControlView {
   private volumeListener: (() => void) | null = null;
 
   aboutToAppear(): void {
+    // 兜底校验：若 @State 初始化时 @Prop 尚未同步（拿到空 id 的实例），此处修正。
+    // aboutToAppear 时 @Prop 一定已就绪（防御性编程，正常情况下无操作）
+    if (this.playerVM.id !== this.playerId) {
+      this.playerVM = PlayerRepository.get(this.playerId) ?? PlayerRepository.create(this.playerId);
+    }
     // 同步一次真实系统音量，保证面板档位与 Hub 初始值正确
     this.playerVM.syncSystemVolume();
     this.panelVolumeLevel = SystemAudioHelper.currentVolume;

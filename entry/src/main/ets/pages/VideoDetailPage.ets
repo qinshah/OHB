@@ -27,12 +27,31 @@ export struct VideoDetailPage {
   @State descExpanded: boolean = false;
   @State commentLoaded: boolean = false;
   @State currentTab: number = 0;
-  /** 视频渲染节点控制器：与全屏页共享同一 XComponent 节点（Surface 不销毁） */
-  @State nodeController: VideoNodeController = VideoNodeController.get(this.bvid);
+  /**
+   * 视频渲染节点控制器：与全屏页共享同一 XComponent 节点（Surface 不销毁）。
+   * 注意：在 aboutToAppear 中获取（而非 @State 初始化表达式），
+   * 保证 bvid 已从路由参数同步就绪，避免拿到空 id 的控制器导致 Surface 绑不上（黑屏）。
+   */
+  private nodeController: VideoNodeController | null = null;
+  /**
+   * 容器重建序号：全屏页完全销毁归还节点时 +1，
+   * ForEach key 随之变化 → NodeContainer 销毁重建 → makeNode 重新挂载节点。
+   * （实测详情页容器在全屏期间可能解绑，rebuild 通知不到，
+   * 必须重建容器才能重新 makeNode 取回游离态节点）
+   */
+  @State containerSeq: number = 0;
   /** 评论 ViewModel（type=1 视频评论） */
   @State commentVm: CommentViewModel = new CommentViewModel();
 
   aboutToAppear(): void {
+    // aboutToAppear 时 @Prop 一定已同步：此时按 bvid 获取节点控制器
+    this.nodeController = VideoNodeController.get(this.bvid);
+    // 注册容器重建回调：全屏页 onDisAppear 归还节点时触发（见 requestRestore）
+    if (this.nodeController !== null) {
+      this.nodeController.setRestoreListener(() => {
+        this.containerSeq++;
+      });
+    }
     this.vm.attachPlayer(this.bvid);
     this.vm.playerVM.attachUIContext(this.getUIContext());
     if (this.bvid.length > 0) {
@@ -45,7 +64,16 @@ export struct VideoDetailPage {
     }
   }
 
+  /** 取本页的节点控制器（保证非空；闭包内使用规避可空类型限制） */
+  private nc(): VideoNodeController {
+    return VideoNodeController.get(this.bvid);
+  }
+
   aboutToDisappear(): void {
+    // 注销容器重建回调（controller 生命周期可能长于本页，防悬空回调）
+    if (this.nodeController !== null) {
+      this.nodeController.setRestoreListener(null);
+    }
     this.vm.playerVM.setAspectRatioReady(null);
     this.vm.playerVM.setSystemVolumeChange(null);
     this.vm.playerVM.detachMediaSession();
@@ -59,10 +87,15 @@ export struct VideoDetailPage {
       Column() {
         // ===== 播放区 =====
         Stack() {
-          // 渲染节点容器：与全屏页共享同一节点，全屏切换时节点迁移、Surface 不销毁
-          NodeContainer(this.nodeController)
-            .width('100%')
-            .height('100%')
+          // 渲染节点容器：与全屏页共享同一节点，全屏切换时节点迁移、Surface 不销毁。
+          // ForEach key 绑定 containerSeq：全屏页归还节点时 seq++ → key 变化 →
+          // 容器销毁重建 → makeNode 重新挂载节点（覆盖容器已解绑、rebuild
+          // 通知不到的场景）。this.nc() 保证返回非空控制器。
+          ForEach([this.containerSeq], (seq: number) => {
+            NodeContainer(this.nc())
+              .width('100%')
+              .height('100%')
+          }, (seq: number) => `nc_${seq}`)
 
           // 控制层
           PlayerControlView({ playerId: this.bvid })
@@ -137,9 +170,11 @@ export struct VideoDetailPage {
       .height('100%')
       .backgroundColor(AppColors.PAGE_BG)
     }
-    // 从全屏页返回时兜底恢复视频节点（正常路径由全屏页 aboutToDisappear 触发，幂等）
+    // 从全屏页返回时不做主动节点操作（对齐官方最佳实践）：
+    // 全屏页容器销毁时框架会自动 rebuild，详情页容器届时 makeNode 拿回节点。
+    // 若在此处（全屏页容器仍存活时）restoreToHost，会引发多容器 makeNode 竞争，
+    // 节点被全屏页容器抢回并随其销毁 → 黑屏。
     .onShown(() => {
-      this.nodeController.restoreToHost();
     })
   }
 

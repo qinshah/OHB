@@ -13,8 +13,8 @@ import { Logger } from '../common/utils/Logger';
  *
  * 设计要点：
  * - 与 VideoDetailPage 共享同一个 Player 实例：全屏页通过 playerId（bvid）经
- *   PlayerRepository.get(id) 获取，不通过 @Prop/路由参数直接传递 Player 对象
- *   （@Prop 会对对象做深拷贝，导致 Player 内部状态丢失）
+ *   PlayerRepository.get(id) 获取（在 aboutToAppear 中获取，保证 @Prop 已同步，
+ *   修复初始化时序导致拿到空实例 → 方向回调失效、Surface 绑不上）
  * - 渲染节点迁移：与详情页共享同一个 XComponent 节点（VideoNodeController），
  *   Surface 在全屏切换全程不销毁，播放器无需换绑/重建，播放零中断
  * - 加载后按视频宽高比调用 DisplayHelper：
@@ -31,14 +31,18 @@ import { Logger } from '../common/utils/Logger';
 export struct VideoFullscreenPage {
   /** 播放器业务 id（bvid），经 PlayerRepository.get(id) 获取共享的 Player 实例 */
   @Prop playerId: string = ''
-  @State playerVM: Player =
-    PlayerRepository.get(this.playerId) ?? PlayerRepository.create(this.playerId)
+  /** 共享播放器实例（aboutToAppear 中获取；非响应式，本页 build 不直接绑定其状态） */
+  private playerVM: Player | null = null;
   /** 视频渲染节点控制器：与详情页共享同一节点（Surface 不销毁，播放零中断） */
-  @State nodeController: VideoNodeController = VideoNodeController.get(this.playerId);
+  private nodeController: VideoNodeController | null = null;
   /** 折叠屏状态监听回调（aboutToDisappear 时反注册） */
   private foldCallback: Callback<display.FoldStatus> | null = null;
 
   aboutToAppear(): void {
+    // @Prop 此时必定已同步：按 playerId 获取共享实例与节点控制器
+    this.playerVM = PlayerRepository.get(this.playerId) ?? PlayerRepository.create(this.playerId);
+    this.nodeController = VideoNodeController.get(this.playerId);
+    Logger.info('Fullscreen', `aboutToAppear playerId=${this.playerId}, playerVM.id=${this.playerVM.id}`);
     this.playerVM.attachUIContext(this.getUIContext());
     // 维护 Player 全屏状态标记（修复：此前该状态从未被设置）
     this.playerVM.markFullscreen(true);
@@ -53,11 +57,15 @@ export struct VideoFullscreenPage {
   }
 
   aboutToDisappear(): void {
-    this.playerVM.markFullscreen(false);
-    this.playerVM.setAspectRatioReady(null);
-    // 节点迁移第二步：归还视频节点给详情页
-    // （rebuild 触发详情页 NodeContainer 重新 makeNode 取回节点）
-    this.nodeController.restoreToHost();
+    if (this.playerVM !== null) {
+      this.playerVM.markFullscreen(false);
+      this.playerVM.setAspectRatioReady(null);
+    }
+    // 节点归还：对齐官方最佳实践——退出全屏时不做任何主动节点操作！
+    // 此处若主动 restoreToHost（rebuild），全屏页容器还存活会参与 makeNode 竞争、
+    // 把节点抢回，随后随页面销毁被连带销毁 → 详情页黑屏。
+    // 正确时序：全屏页容器销毁时框架自动触发 rebuild，详情页容器此时才
+    // makeNode 拿回节点（官方 LandscapePlay 退出时同样不碰 nodeController）。
     // 反注册折叠屏监听
     if (this.foldCallback !== null) {
       try {
@@ -77,7 +85,8 @@ export struct VideoFullscreenPage {
   private watchFoldStatus(): void {
     try {
       this.foldCallback = (status: display.FoldStatus): void => {
-        if (status === display.FoldStatus.FOLD_STATUS_FOLDED && this.playerVM.fullscreen) {
+        if (status === display.FoldStatus.FOLD_STATUS_FOLDED &&
+          this.playerVM !== null && this.playerVM.fullscreen) {
           Route.pop();
         }
       };
@@ -91,9 +100,11 @@ export struct VideoFullscreenPage {
     NavDestination() {
       Stack() {
         // 渲染节点容器：makeNode 返回与详情页共享的 XComponent 节点（自动迁移挂载）
-        NodeContainer(this.nodeController)
-          .width('100%')
-          .height('100%')
+        if (this.nodeController !== null) {
+          NodeContainer(this.nodeController)
+            .width('100%')
+            .height('100%')
+        }
 
         // 控制层（含全屏按钮 → 退出全屏页）
         PlayerControlView({ playerId: this.playerId })
@@ -121,5 +132,13 @@ export struct VideoFullscreenPage {
       .backgroundColor(Color.Black)
     }
     .hideTitleBar(true)
+    // 页面完全销毁后归还节点（晚于容器销毁，此时无垂死容器竞争 makeNode）。
+    // 实测在容器销毁回调（NodeController.aboutToDisappear）里 rebuild 会被
+    // 垂死容器抢先响应抢走节点，详情页拿不到 → 黑屏；onDisAppear 是安全时机。
+    .onDisAppear(() => {
+      if (this.nodeController !== null) {
+        this.nodeController.requestRestore();
+      }
+    })
   }
 }

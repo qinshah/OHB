@@ -61,6 +61,16 @@ export class VideoDetailVM {
     PlayerRepository.remove(this.playerKey); // 释放占位/旧实例
     this.playerVM = target;
     this.playerKey = bvid;
+    // 经 AppStorage 发布 Player 引用：VideoPlayerNode 组件 onLoad 时跨模块解析并绑定 Surface。
+    // 不用自定义 static Map 注册表——@Component 编译单元存在模块双实例问题（注册与查询
+    // 读到不同副本）；AppStorage 是框架级全局单例，跨模块绝对共享。
+    // 时序：本方法在 aboutToAppear 同步执行，必然早于 XComponent onLoad。
+    AppStorage.setOrCreate(VideoDetailVM.playerKeyOf(bvid), target);
+  }
+
+  /** AppStorage 中 Player 引用的 key（与 VideoPlayerNode 的字面量前缀保持一致） */
+  static playerKeyOf(bvid: string): string {
+    return `__ohb_vplayer_${bvid}`;
   }
 
   async load(bvid: string): Promise<void> {
@@ -243,6 +253,8 @@ export class VideoDetailVM {
 
   async release(): Promise<void> {
     this.loadSeq++;
+    // 清理 AppStorage 中发布的 Player 引用（防止泄漏与脏引用）
+    AppStorage.delete(VideoDetailVM.playerKeyOf(this.playerKey));
     await PlayerRepository.remove(this.playerKey);
   }
 }
