@@ -82,11 +82,11 @@ export struct HomePage {
       .height('100%')
       .backgroundColor(AppColors.PAGE_BG)
     }
-    .title(this.buildSearchBar())
+    .title(this.SearchBar())
   }
 
   @Builder
-  buildSearchBar() {
+  SearchBar() {
     // 顶部栏
     Row() {
       Search({

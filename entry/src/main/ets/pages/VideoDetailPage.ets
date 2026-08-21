@@ -13,6 +13,7 @@ import { VideoCardView } from '../common/components/VideoCardView';
 import { common } from '@kit.AbilityKit';
 import { UserSpaceParam } from './RouteParams';
 import { VideoNodeController } from '../player/VideoNodeController';
+import { VideoListTile } from '../common/components/VideoListTile';
 
 /**
  * 视频详情页（TabView 布局）
@@ -295,8 +296,6 @@ export struct VideoDetailPage {
         this.PageList()
       }
     }
-    .width('100%')
-    .padding(12)
   }
 
   @Builder
@@ -340,9 +339,8 @@ export struct VideoDetailPage {
 
   @Builder
   RelatedTab() {
-
-    Scroll() {
-      Column({ space: 10 }) {
+    List() {
+      ListItem() {
         // ===== 详情区 =====
         if (this.vm.detailState.status === DataStatus.Loading) {
           LoadingView()
@@ -360,43 +358,43 @@ export struct VideoDetailPage {
           // ===== 详情头部（标题/UP/互动/简介/分P）=====
           this.DetailHeader()
         }
+      }
+
+      ListItem() {
         // 相关视频
         Text('相关推荐')
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
           .fontColor(AppColors.TEXT_PRIMARY)
           .width('100%')
-        if (this.vm.relatedState.status === DataStatus.Loading) {
+      }.padding({ top: 20, bottom: 10 })
+
+      if (this.vm.relatedState.status === DataStatus.Loading) {
+        ListItem() {
           LoadingProgress()
             .width(28)
             .height(28)
             .color(AppColors.BRAND)
             .margin({ top: 8 })
-        } else if (this.vm.relatedState.status === DataStatus.Data) {
-          WaterFlow() {
-            ForEach(this.vm.related, (item: VideoCard) => {
-              FlowItem() {
-                VideoCardView({
-                  card: item,
-                  onCardClick: (bvid: string) => {
-                    Route.push(Route.videoDetail, bvid);
-                  }
-                })
-              }
-            }, (item: VideoCard) => item.bvid)
-          }
-          .columnsTemplate('1fr 1fr')
-          .columnsGap(8)
-          .rowsGap(8)
-          .width('100%')
         }
+      } else if (this.vm.relatedState.status === DataStatus.Data) {
+        ForEach(this.vm.related, (item: VideoCard) => {
+          ListItem() {
+            VideoListTile({
+              card: item,
+              onCardClick: (bvid: string) => {
+                Route.push(Route.videoDetail, bvid);
+              }
+            })
+          }
+          .padding({ top: 6, bottom: 6 })
+          .height(100) // TODO 一多高度
+        }, (item: VideoCard) => item.bvid)
       }
-      .width('100%')
-      .padding(12)
     }
+    .width('100%').height('100%')
+    .padding({ left: 8, right: 8 })
     .scrollBar(BarState.Off)
-    .width('100%')
-    .height('100%')
   }
 
   @Builder
