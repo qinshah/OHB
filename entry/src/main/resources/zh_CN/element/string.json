@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "EntryAbility_desc",
+      "value": "描述"
+    },
+    {
+      "name": "app_name",
+      "value": "OH哔"
+    },
+    {
+      "name": "module_desc",
+      "value": "模块描述"
+    }
+  ]
+}
