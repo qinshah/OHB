@@ -140,7 +140,13 @@ export default struct VideoDetailPage {
           })
         }
         .width('100%')
-        .aspectRatio(this.vm.playerVM.aspectRatio > 0 ? this.vm.playerVM.aspectRatio : 16 / 9)
+        // 播放器容器固定 16:9（不跟随视频宽高比）：
+        // - 修复「点互动按钮触发 rebuild 后视频画面才顺带更新宽高比」的问题
+        //   （旧写法深读 @State vm.playerVM.aspectRatio，嵌套 @Observed 变更不触发刷新，
+        //   仅在无关状态更新时被连带读取）
+        // - 避免竖屏视频（宽高比 < 1）时容器过高，挤压下方 Tabs 空间
+        // - 视频画面本身由内核 videoScaleType=FIT（contain）在 16:9 容器内等比缩放留黑边
+        .aspectRatio(16 / 9)
         .backgroundColor(Color.Black)
 
         // ===== Tabs：推荐 / 评论 =====

@@ -68,6 +68,8 @@ export class Player {
   private uiContext: UIContext | null = null;
   /** 视频宽高比就绪回调（aspectRatio 首次 > 0 时触发一次，由 VideoFullscreenPage 使用） */
   private aspectReadyCb: ((aspect: number) => void) | null = null;
+  /** 视频宽高比变化持久回调（每次 videoSizeChange 触发，VideoPlayerNode 镜像同步、响应式更新画面 contain 布局） */
+  private aspectChangeCb: ((aspect: number) => void) | null = null;
   /** 系统音量变化回调（由 SystemAudioHelper 监听器驱动，UI 注册用于刷新 Hub） */
   private sysVolumeChangeCb: (() => void) | null = null;
   /** 本控制器注册到 SystemAudioHelper 的监听（release 时反注册，避免泄漏） */
@@ -153,6 +155,14 @@ export class Player {
     }
   }
 
+  /**
+   * UI 注册宽高比变化持久回调（每次 videoSizeChange 触发，用于镜像 aspectRatio 驱动画面 contain 布局）。
+   * 与 setAspectRatioReady 不同：本次注册会持续接收后续所有宽高比变化，不会被自动清除。
+   */
+  setAspectRatioListener(cb: ((aspect: number) => void) | null): void {
+    this.aspectChangeCb = cb;
+  }
+
   /** UI 注册系统音量变化回调（用于 Hub 显示硬件音量键变化的实际值） */
   setSystemVolumeChange(cb: (() => void) | null): void {
     this.sysVolumeChangeCb = cb;
@@ -197,6 +207,10 @@ export class Player {
         const cb = this.aspectReadyCb;
         this.aspectReadyCb = null;
         cb(this.aspectRatio);
+      }
+      // 触发持久回调（UI 镜像同步，驱动画面宽高比响应式更新）
+      if (this.aspectRatio > 0 && this.aspectChangeCb !== null) {
+        this.aspectChangeCb(this.aspectRatio);
       }
     });
   }
