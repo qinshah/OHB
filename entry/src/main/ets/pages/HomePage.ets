@@ -53,7 +53,7 @@ export struct HomePage {
                   VideoCardView({
                     card: item,
                     onCardClick: (bvid: string) => {
-                      Route.push(Route.videoDetail, bvid);
+                      Route.push(Route.video, bvid);
                     }
                   })
                 }

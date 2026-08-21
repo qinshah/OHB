@@ -1,6 +1,6 @@
 import { Logger } from '../common/utils/Logger';
 import { DisplayHelper } from '../common/utils/DisplayHelper';
-import { VideoDetailPage } from '../pages/VideoDetailPage';
+import VideoPage from '../pages/VideoPage';
 import { SearchPage } from '../pages/SearchPage';
 import { SearchResultPage } from '../pages/SearchResultPage';
 import { LoginPage } from '../pages/LoginPage';
@@ -85,7 +85,7 @@ export class Route {
     Route.stack?.popToIndex(0);
   }
 
-  static readonly videoDetail: RoutePage = new RoutePage(VideoDetailPage.name, wrapBuilder(videoDetailPageBuilder))
+  static readonly video: RoutePage = new RoutePage(VideoPage.name, wrapBuilder(videoPageBuilder))
   static readonly search: RoutePage = new RoutePage(SearchPage.name, wrapBuilder(searchPageBuilder))
   static readonly searchResult: RoutePage = new RoutePage(SearchResultPage.name, wrapBuilder(searchResultPageBuilder))
   static readonly login: RoutePage = new RoutePage(LoginPage.name, wrapBuilder(loginPageBuilder))
@@ -113,8 +113,8 @@ export class Route {
 }
 
 @Builder
-function videoDetailPageBuilder(param: Object) {
-  VideoDetailPage({ bvid: param as string })
+function videoPageBuilder(param: Object) {
+  VideoPage({ bvid: param as string })
 }
 
 @Builder

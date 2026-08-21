@@ -152,7 +152,7 @@ export struct TopicFeedPage {
     .borderRadius(10)
     .onClick(() => {
       if (card.videoBvid.length > 0) {
-        Route.push(Route.videoDetail, card.videoBvid);
+        Route.push(Route.video, card.videoBvid);
       } else {
         const p: DynamicDetailParam = { id: card.idStr };
         Route.push(Route.dynamicDetail, p);

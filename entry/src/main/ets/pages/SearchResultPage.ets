@@ -215,7 +215,7 @@ export struct SearchResultPage {
       VideoCardView({
         card: SearchResultPage.rowToVideoCard(row),
         onCardClick: (bvid: string) => {
-          Route.push(Route.videoDetail, bvid);
+          Route.push(Route.video, bvid);
         }
       })
     } else if (row.kind === SearchRowKind.User) {

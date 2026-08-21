@@ -142,7 +142,7 @@ export struct DynamicDetailPage {
               .onClick(() => {
                 const item = this.vm.item;
                 if (item !== null && item.videoBvid.length > 0) {
-                  Route.push(Route.videoDetail, item.videoBvid);
+                  Route.push(Route.video, item.videoBvid);
                 }
               })
             }

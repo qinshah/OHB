@@ -211,7 +211,7 @@ export struct DynamicPage {
         .width('100%')
         .alignItems(HorizontalAlign.Start)
         .onClick(() => {
-          Route.push(Route.videoDetail, item.videoBvid);
+          Route.push(Route.video, item.videoBvid);
         })
       }
 

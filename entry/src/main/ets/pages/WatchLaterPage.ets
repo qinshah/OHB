@@ -102,7 +102,7 @@ export struct WatchLaterPage {
               .backgroundColor(AppColors.CARD_BG)
               .borderRadius(10)
               .onClick(() => {
-                Route.push(Route.videoDetail, item.bvid);
+                Route.push(Route.video, item.bvid);
               })
             }
           }, (item: HistoryItem) => `${item.aid}`)

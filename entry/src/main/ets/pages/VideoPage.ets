@@ -22,7 +22,7 @@ import { VideoListTile } from '../common/components/VideoListTile';
  * - Tabs 切换「推荐」与「评论」
  */
 @Component
-export struct VideoDetailPage {
+export default struct VideoDetailPage {
   @Prop bvid: string = '';
   @State vm: VideoDetailVM = new VideoDetailVM();
   @State descExpanded: boolean = false;
@@ -383,7 +383,7 @@ export struct VideoDetailPage {
             VideoListTile({
               card: item,
               onCardClick: (bvid: string) => {
-                Route.push(Route.videoDetail, bvid);
+                Route.push(Route.video, bvid);
               }
             })
           }

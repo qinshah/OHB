@@ -138,7 +138,7 @@ export struct FavoriteDetailPage {
     .backgroundColor(AppColors.CARD_BG)
     .borderRadius(10)
     .onClick(() => {
-      Route.push(Route.videoDetail, media.bvid);
+      Route.push(Route.video, media.bvid);
     })
   }
 }

@@ -241,7 +241,7 @@ export struct UserSpacePage {
     .backgroundColor(AppColors.CARD_BG)
     .borderRadius(10)
     .onClick(() => {
-      Route.push(Route.videoDetail, item.bvid);
+      Route.push(Route.video, item.bvid);
     })
   }
 
@@ -300,7 +300,7 @@ export struct UserSpacePage {
         }
         .width('100%')
         .onClick(() => {
-          Route.push(Route.videoDetail, item.videoBvid);
+          Route.push(Route.video, item.videoBvid);
         })
       }
       if (item.images.length > 0) {
