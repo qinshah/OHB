@@ -85,45 +85,29 @@ export struct SearchResultPage {
   }
 
   build() {
-    Column() {
-      // 标题栏
-      Row({ space: 8 }) {
-        Text('‹')
-          .fontSize(24)
-          .fontColor(AppColors.TEXT_PRIMARY)
-          .width(32)
-          .onClick(() => {
-            Route.pop();
-          })
-        Text(`"${this.keyword}" 的搜索结果`)
-          .fontSize(17)
-          .fontColor(AppColors.TEXT_PRIMARY)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .layoutWeight(1)
+    NavDestination() {
+      Column() {
+        // 分类 Tab
+        Tabs({ index: $$this.currentTabIdx }) {
+          ForEach(SEARCH_TABS, (tab: TabDef) => {
+            TabContent() {
+              this.ResultList()
+            }
+            .tabBar(tab.label)
+          }, (tab: TabDef) => tab.label)
+        }
+        .barHeight(40)
+        .layoutWeight(1)
+        .onChange((idx: number) => {
+          this.currentTabIdx = idx;
+          this.vm.doSearch(SEARCH_TABS[idx].type, this.keyword);
+        })
       }
       .width('100%')
-      .padding({ left: 8, right: 12, top: 8, bottom: 4 })
-
-      // 分类 Tab
-      Tabs({ index: $$this.currentTabIdx }) {
-        ForEach(SEARCH_TABS, (tab: TabDef) => {
-          TabContent() {
-            this.ResultList()
-          }
-          .tabBar(tab.label)
-        }, (tab: TabDef) => tab.label)
-      }
-      .barHeight(40)
-      .layoutWeight(1)
-      .onChange((idx: number) => {
-        this.currentTabIdx = idx;
-        this.vm.doSearch(SEARCH_TABS[idx].type, this.keyword);
-      })
+      .height('100%')
+      .backgroundColor(AppColors.PAGE_BG)
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(AppColors.PAGE_BG)
+    .title(`'${this.keyword}'的搜索结果`)
   }
 
   @Builder
@@ -150,7 +134,12 @@ export struct SearchResultPage {
           })
         }
         .width('100%')
-        .padding({ left: 12, right: 12, top: 4, bottom: 4 })
+        .padding({
+          left: 12,
+          right: 12,
+          top: 4,
+          bottom: 4
+        })
       }
 
       if (this.vm.resultState.status === DataStatus.Loading) {
@@ -174,7 +163,8 @@ export struct SearchResultPage {
             FlowItem() {
               this.RowCard(row)
             }
-          }, (row: SearchRow, index: number) => `${row.kind}_${row.bvid}_${row.mid}_${row.roomid}_${row.mediaId}_${row.articleId}_${index}`)
+          }, (row: SearchRow,
+            index: number) => `${row.kind}_${row.bvid}_${row.mid}_${row.roomid}_${row.mediaId}_${row.articleId}_${index}`)
         }
         .columnsTemplate('1fr 1fr')
         .columnsGap(8)
@@ -197,7 +187,12 @@ export struct SearchResultPage {
       .fontColor(AppColors.TEXT_SECONDARY)
       .backgroundColor(AppColors.CARD_BG)
       .borderRadius(10)
-      .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+      .padding({
+        left: 8,
+        right: 8,
+        top: 4,
+        bottom: 4
+      })
       .bindMenu(options.map((opt: string, idx: number) => {
         const item: MenuElement = {
           value: opt,
@@ -256,9 +251,15 @@ export struct SearchResultPage {
             .fontColor(Color.White)
             .backgroundColor('#99000000')
             .borderRadius(4)
-            .padding({ left: 4, right: 4, top: 1, bottom: 1 })
+            .padding({
+              left: 4,
+              right: 4,
+              top: 1,
+              bottom: 1
+            })
             .margin({ right: 6, bottom: 6 })
         }
+
         Text(row.title)
           .fontSize(13)
           .fontColor(AppColors.TEXT_PRIMARY)

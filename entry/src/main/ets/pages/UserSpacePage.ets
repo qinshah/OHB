@@ -24,81 +24,64 @@ export struct UserSpacePage {
   }
 
   build() {
-    Column() {
-      // 顶部
-      Row() {
-        Text('‹')
-          .fontSize(24)
-          .fontColor(AppColors.TEXT_PRIMARY)
-          .width(32)
-          .onClick(() => {
-            Route.pop();
+    NavDestination() {
+      Column() {
+        if (this.vm.infoState.status === DataStatus.Loading) {
+          LoadingView()
+            .layoutWeight(1)
+        } else if (this.vm.infoState.status === DataStatus.Error) {
+          ErrorView({
+            message: this.vm.errorMessage,
+            retryable: true,
+            onRetry: () => {
+              this.vm.load();
+            }
           })
-        Text(this.vm.info?.name ?? '用户主页')
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TEXT_PRIMARY)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
+        } else if (this.vm.info !== null) {
+          Scroll() {
+            Column({ space: 12 }) {
+              this.ProfileCard(this.vm.info)
+              Tabs({ index: $$this.currentTabIdx }) {
+                TabContent() {
+                  this.ArchiveTab()
+                }
+                .tabBar('视频')
+
+                TabContent() {
+                  this.DynamicTab()
+                }
+                .tabBar('动态')
+
+                TabContent() {
+                  this.FolderTab()
+                }
+                .tabBar('收藏')
+              }
+              .barHeight(40)
+              .onChange((idx: number) => {
+                this.currentTabIdx = idx;
+                if (idx === 0 && this.vm.archiveState.status === DataStatus.Idle) {
+                  this.vm.loadArchives();
+                } else if (idx === 1 && this.vm.dynamicState.status === DataStatus.Idle) {
+                  this.vm.loadDynamics();
+                } else if (idx === 2 && this.vm.folderState.status === DataStatus.Idle) {
+                  this.vm.loadFolders();
+                }
+              })
+            }
+            .width('100%')
+            .padding(8)
+          }
           .layoutWeight(1)
+          .scrollBar(BarState.Off)
+        }
       }
       .width('100%')
-      .padding({ left: 8, right: 12, top: 8, bottom: 4 })
-
-      if (this.vm.infoState.status === DataStatus.Loading) {
-        LoadingView()
-          .layoutWeight(1)
-      } else if (this.vm.infoState.status === DataStatus.Error) {
-        ErrorView({
-          message: this.vm.errorMessage,
-          retryable: true,
-          onRetry: () => {
-            this.vm.load();
-          }
-        })
-          .layoutWeight(1)
-      } else if (this.vm.info !== null) {
-        Scroll() {
-          Column({ space: 12 }) {
-            this.ProfileCard(this.vm.info)
-            Tabs({ index: $$this.currentTabIdx }) {
-              TabContent() {
-                this.ArchiveTab()
-              }
-              .tabBar('视频')
-
-              TabContent() {
-                this.DynamicTab()
-              }
-              .tabBar('动态')
-
-              TabContent() {
-                this.FolderTab()
-              }
-              .tabBar('收藏')
-            }
-            .barHeight(40)
-            .onChange((idx: number) => {
-              this.currentTabIdx = idx;
-              if (idx === 0 && this.vm.archiveState.status === DataStatus.Idle) {
-                this.vm.loadArchives();
-              } else if (idx === 1 && this.vm.dynamicState.status === DataStatus.Idle) {
-                this.vm.loadDynamics();
-              } else if (idx === 2 && this.vm.folderState.status === DataStatus.Idle) {
-                this.vm.loadFolders();
-              }
-            })
-          }
-          .width('100%')
-          .padding(8)
-        }
-        .layoutWeight(1)
-        .scrollBar(BarState.Off)
-      }
+      .height('100%')
+      .backgroundColor(AppColors.PAGE_BG)
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(AppColors.PAGE_BG)
+    .title(this.vm.info?.name ?? '用户主页')
   }
 
   @Builder
@@ -122,9 +105,15 @@ export struct UserSpacePage {
                 .fontColor(Color.White)
                 .backgroundColor(AppColors.BRAND)
                 .borderRadius(6)
-                .padding({ left: 5, right: 5, top: 1, bottom: 1 })
+                .padding({
+                  left: 5,
+                  right: 5,
+                  top: 1,
+                  bottom: 1
+                })
             }
           }
+
           Text(`LV${info.level} · ${info.sex}${info.officialTitle.length > 0 ? ' · ' + info.officialTitle : ''}`)
             .fontSize(12)
             .fontColor(AppColors.TEXT_SECONDARY)
@@ -137,7 +126,12 @@ export struct UserSpacePage {
           .fontColor(this.vm.isFollowing ? AppColors.TEXT_SECONDARY : Color.White)
           .backgroundColor(this.vm.isFollowing ? AppColors.CARD_BG : AppColors.BRAND)
           .borderRadius(14)
-          .padding({ left: 14, right: 14, top: 5, bottom: 5 })
+          .padding({
+            left: 14,
+            right: 14,
+            top: 5,
+            bottom: 5
+          })
           .border({ width: 1, color: AppColors.DIVIDER })
           .onClick(() => {
             this.vm.toggleFollow();
@@ -218,11 +212,17 @@ export struct UserSpacePage {
           .fontColor(Color.White)
           .backgroundColor('#99000000')
           .borderRadius(4)
-          .padding({ left: 4, right: 4, top: 1, bottom: 1 })
+          .padding({
+            left: 4,
+            right: 4,
+            top: 1,
+            bottom: 1
+          })
           .margin(4)
       }
       .width(140)
       .height(84)
+
       Column({ space: 4 }) {
         Text(item.title)
           .fontSize(14)
