@@ -148,7 +148,6 @@ export struct SearchPage {
 
   @Builder
   buildSearchBar() {
-
     // 搜索栏
     Row({ space: 8 }) {
       Search({ value:this.inputText, placeholder: '搜索视频、UP主、番剧' })
@@ -173,7 +172,6 @@ export struct SearchPage {
           this.gotoResult(this.inputText);
         })
     }
-    .width('100%')
     .padding({
       left: 12,
       right: 12,
