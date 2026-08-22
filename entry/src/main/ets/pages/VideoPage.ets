@@ -177,12 +177,7 @@ export default struct VideoDetailPage {
       .height('100%')
       .backgroundColor(AppColors.PAGE_BG)
     }
-    // 从全屏页返回时不做主动节点操作（对齐官方最佳实践）：
-    // 全屏页容器销毁时框架会自动 rebuild，详情页容器届时 makeNode 拿回节点。
-    // 若在此处（全屏页容器仍存活时）restoreToHost，会引发多容器 makeNode 竞争，
-    // 节点被全屏页容器抢回并随其销毁 → 黑屏。
-    .onShown(() => {
-    })
+    .hideTitleBar(true)
   }
 
   @Builder

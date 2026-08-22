@@ -4,6 +4,7 @@ import { AppError } from '../../common/result/AppError';
 import { Logger } from '../../common/utils/Logger';
 import { Callback } from '@kit.BasicServicesKit';
 import { ContextUtil } from '../../common/utils/ContextUtil';
+import ConfigurationConstant from '@ohos.app.ability.ConfigurationConstant';
 
 const prefRegistry: PrefItem<preferences.ValueType>[] = [];
 const PREFS_NAME = 'user_prefs'
@@ -39,7 +40,7 @@ interface PrefItemP<T extends preferences.ValueType> {
   needInit?: boolean;
 }
 
-const emptyCallback = () => {
+const TODO = () => {
 }
 
 /**
@@ -69,7 +70,7 @@ export class PrefItem<T extends preferences.ValueType> {
     this.onChange = props.onChange;
     prefRegistry.push(this);
     if (this.needInit) {
-      // this.init()
+      this.init()
     }
   }
 
@@ -133,85 +134,80 @@ export class Pref {
   // ---------- 设置项定义（static PrefItem 实例） ----------
 
   /** 播放：默认清晰度（qn） */
-  static readonly DEFAULT_QUALITY: PrefItem<number> = new PrefItem<number>({
-    key: 'default_quality',
+  static readonly defaultQuality: PrefItem<number> = new PrefItem<number>({
+    key: 'defaultQuality',
     def: 80,
-    onChange: emptyCallback,
+    onChange: TODO,
     title: '默认清晰度',
     desc: '播放的默认清晰度'
   });
   /** 播放：默认倍速 */
-  static readonly DEFAULT_SPEED: PrefItem<number> = new PrefItem<number>({
-    key: 'default_speed',
+  static readonly defaultSpeed: PrefItem<number> = new PrefItem<number>({
+    key: 'defaultSpeed',
     def: 1,
-    onChange: emptyCallback,
+    onChange: TODO,
     title: '默认倍速',
     desc: '播放的默认倍速'
   });
-  /** 播放：自动连播下一P */
-  static readonly AUTO_PLAY_NEXT: PrefItem<boolean> = new PrefItem<boolean>({
-    key: 'auto_play_next',
-    def: true,
-    onChange: emptyCallback,
-    title: '自动连播',
-    desc: '自动播放下一P'
-  });
-  /** 播放：弹幕开关 */
-  static readonly DANMAKU_ENABLED: PrefItem<boolean> = new PrefItem<boolean>({
-    key: 'danmaku_enabled',
-    def: true,
-    onChange: emptyCallback,
-    title: '弹幕开关',
-    desc: '是否显示弹幕'
-  });
+  // /** 播放：自动连播下一P */
+  // static readonly autoPlayNext: PrefItem<boolean> = new PrefItem<boolean>({
+  //   key: 'autoPlayNext',
+  //   def: true,
+  //   onChange: emptyCallback,
+  //   title: '自动连播',
+  //   desc: '自动播放下一P'
+  // });
+  // /** 播放：弹幕开关 */
+  // static readonly enableDanmaku: PrefItem<boolean> = new PrefItem<boolean>({
+  //   key: 'enableDanmaku',
+  //   def: true,
+  //   onChange: emptyCallback,
+  //   title: '弹幕开关',
+  //   desc: '是否显示弹幕'
+  // });
   /** 外观：深色模式（system/light/dark） */
-  static readonly DARK_MODE: PrefItem<string> = new PrefItem<string>({
-    key: 'dark_mode',
-    def: 'system',
-    onChange: emptyCallback,
+  static readonly colorMode = new PrefItem<number>({
+    key: 'colorMode',
+    def: ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET,
+    onChange: (v) => {
+      ContextUtil.appContext.setColorMode(v as number)
+    },
+    entries: PrefItem.fromEnum(ConfigurationConstant.ColorMode),
     title: '深色模式',
     desc: '外观主题（跟随系统/浅色/深色）'
   });
-  /** 搜索：历史记录开关 */
-  static readonly SEARCH_HISTORY_ENABLED: PrefItem<boolean> = new PrefItem<boolean>({
-    key: 'search_history_enabled',
-    def: true,
-    onChange: emptyCallback,
-    title: '搜索历史',
-    desc: '是否记录搜索历史'
-  });
-  /** 隐私：屏蔽关键词（逗号分隔） */
-  static readonly FILTER_KEYWORDS: PrefItem<string> = new PrefItem<string>({
-    key: 'filter_keywords',
-    def: '',
-    onChange: emptyCallback,
-    title: '屏蔽关键词',
-    desc: '逗号分隔的关键词列表'
-  });
-  /** 隐私：黑名单 UP mid（逗号分隔） */
-  static readonly FILTER_BLACK_MIDS: PrefItem<string> = new PrefItem<string>({
-    key: 'filter_black_mids',
-    def: '',
-    onChange: emptyCallback,
-    title: 'UP黑名单',
-    desc: '逗号分隔的UP主mid列表'
-  });
-  /** 隐私：最低赞播比（0 关闭） */
-  static readonly FILTER_MIN_LIKE_RATIO: PrefItem<number> = new PrefItem<number>({
-    key: 'filter_min_like_ratio',
-    def: 0,
-    onChange: emptyCallback,
-    title: '最低赞播比',
-    desc: '低于此比例的视频将被过滤（0关闭）'
-  });
-  /** 日志：日志开关 */
-  static readonly LOG_ENABLED: PrefItem<boolean> = new PrefItem<boolean>({
-    key: 'log_enabled',
-    def: false,
-    onChange: emptyCallback,
-    title: '日志开关',
-    desc: '是否启用日志记录'
-  });
+  // /** 隐私：屏蔽关键词（逗号分隔） */
+  // static readonly filterKeywords: PrefItem<string> = new PrefItem<string>({
+  //   key: 'filterKeywords',
+  //   def: '',
+  //   onChange: TODO,
+  //   title: '屏蔽关键词',
+  //   desc: '逗号分隔的关键词列表'
+  // });
+  // /** 隐私：黑名单 UP mid（逗号分隔） */
+  // static readonly filterUpMids: PrefItem<string> = new PrefItem<string>({
+  //   key: 'filterUpMids',
+  //   def: '',
+  //   onChange: TODO,
+  //   title: 'UP黑名单',
+  //   desc: '逗号分隔的UP主mid列表'
+  // });
+  // /** 隐私：最低赞播比（0 关闭） */
+  // static readonly filterMinKikeRatio: PrefItem<number> = new PrefItem<number>({
+  //   key: 'filterMinKikeRatio',
+  //   def: 0,
+  //   onChange: TODO,
+  //   title: '最低赞播比',
+  //   desc: '低于此比例的视频将被过滤（0关闭）'
+  // });
+  // /** 日志：收集日志 */
+  // static readonly collectLogs: PrefItem<boolean> = new PrefItem<boolean>({
+  //   key: 'collectLog',
+  //   def: false,
+  //   onChange: TODO,
+  //   title: '收集日志',
+  //   desc: '是否开始收集日志，用于提供日志给开发者定位bug'
+  // });
 
   /**
    * 导出为 JSON 字符串：schemaVersion + 仅非默认项

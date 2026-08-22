@@ -1,11 +1,11 @@
-export class ContextUtil {
-  private static _context: Context | undefined = undefined
+import { common } from "@kit.AbilityKit"
 
-  static get context(): Context | undefined {
-    return ContextUtil._context
-  }
+export class ContextUtil {
+  static context: Context
+  static appContext: common.ApplicationContext
 
   static init(context: Context) {
-    ContextUtil._context = context
+    ContextUtil.context = context
+    ContextUtil.appContext = context.getApplicationContext()
   }
 }

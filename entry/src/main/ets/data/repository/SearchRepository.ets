@@ -189,9 +189,6 @@ export class SearchRepository {
   // ---------- 搜索历史（本地持久化） ----------
 
   getHistory(): string[] {
-    if (!Pref.SEARCH_HISTORY_ENABLED.get()) {
-      return [];
-    }
     if (this.prefs === null) {
       return [];
     }
@@ -204,9 +201,6 @@ export class SearchRepository {
   }
 
   addHistory(keyword: string): void {
-    if (!Pref.SEARCH_HISTORY_ENABLED.get()) {
-      return;
-    }
     if (this.prefs === null || keyword.trim().length === 0) {
       return;
     }

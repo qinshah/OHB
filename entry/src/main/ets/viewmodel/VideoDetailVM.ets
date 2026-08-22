@@ -224,7 +224,7 @@ export class VideoDetailVM {
       this.playError = '缺少 cid，无法获取播放地址';
       return;
     }
-    const qn = Pref.DEFAULT_QUALITY.get();
+    const qn = Pref.defaultQuality.get();
     const r = await this.repo.getPlayUrl(bvid, cid, qn);
     if (seq !== this.loadSeq) {
       return;
@@ -236,7 +236,7 @@ export class VideoDetailVM {
     this.playUrlInfo = r.value;
     await this.playerVM.load(this.playUrlInfo.url, Player.defaultHeaders());
     // 应用默认倍速（设置中心，AP-4）
-    const speed = Pref.DEFAULT_SPEED.get();
+    const speed = Pref.defaultSpeed.get();
     if (speed !== 1) {
       await this.playerVM.setSpeed(speed);
     }

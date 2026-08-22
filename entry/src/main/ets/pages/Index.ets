@@ -60,10 +60,7 @@ struct Index {
 
   @Builder
   routeBuilder(name: string, param: Object) {
-    NavDestination() {
-      Route.get(name)?.builder(param)
-    }
-    .hideTitleBar(true)
+    Route.get(name)?.builder(param)
   }
 
   build() {
