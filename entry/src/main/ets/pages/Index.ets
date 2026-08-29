@@ -6,6 +6,7 @@ import { MinePage } from './MinePage';
 import { AppColors } from '../theme/AppTheme';
 import { Route } from '../framework/Route';
 import { ImmersiveHelper } from '../common/utils/ImmersiveHelper';
+import { UpdateUtils } from '../common/utils/UpdateUtils';
 import { winUtils } from '../services/appearance/WinUtils';
 import { IndexViewModel } from '../viewmodel/IndexViewModel';
 
@@ -56,6 +57,8 @@ struct Index {
 
   aboutToAppear(): void {
     Route.register(this.navStack);
+    // 启动时自动检查一次更新（失败静默，不打扰用户）
+    UpdateUtils.checkUpdate(true);
   }
 
   @Builder

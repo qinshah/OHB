@@ -2,6 +2,7 @@ import { AccountProfile } from '../models/LoginModels';
 import { Route, RoutePage } from '../framework/Route';
 import { MineViewModel } from '../viewmodel/MineViewModel';
 import { AppColors } from '../theme/AppTheme';
+import { UpdateUtils } from '../common/utils/UpdateUtils';
 
 /**
  * 我的页（Task 4/10）：当前账户、多账户列表与切换、退出登录。
@@ -168,6 +169,25 @@ export struct MinePage {
         }
         .width('100%')
         .alignItems(HorizontalAlign.Start)
+
+        // 检查更新入口
+        Row() {
+          Text('检查更新')
+            .fontSize(14)
+            .fontColor(AppColors.TEXT_PRIMARY)
+          Blank()
+          Text('›')
+            .fontSize(20)
+            .fontColor(AppColors.TEXT_SECONDARY)
+        }
+        .width('100%')
+        .padding(14)
+        .backgroundColor(AppColors.CARD_BG)
+        .borderRadius(10)
+        .onClick(() => {
+          // 手动检查：有结果提示（已是最新 / 失败 / 发现新版本弹窗）
+          UpdateUtils.checkUpdate(false);
+        })
 
         // 设置入口
         Row() {
