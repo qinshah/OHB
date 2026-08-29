@@ -1,0 +1,77 @@
+name: Release CI
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      draft_release:
+        description: '创建 Release 草稿'
+        type: boolean
+        default: false
+      tag_name:
+        description: 'Release 草稿关联的 tag 名（留空则自动生成）'
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build HAP (release, unsigned)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev
+
+      - name: Set up HarmonyOS toolchain
+        uses: ErBWs/setup-ohos@v2
+        with:
+          version: 26.0.0.621
+          cache: true
+
+      # build-profile.json5 被 .gitignore 忽略，CI 中从 example 生成
+      - name: Prepare build profile
+        run: |
+          if [ ! -f build-profile.json5 ]; then
+            cp build-profile.json5.example build-profile.json5
+          fi
+          cat build-profile.json5
+
+      - name: Install ohpm dependencies
+        run: ohpm install --all
+
+      - name: Build HAP
+        run: hvigorw assembleHap --mode module -p product=default -p buildMode=release --no-daemon
+
+      - name: Collect HAP outputs
+        run: |
+          ls -l entry/build/default/outputs/default/
+          mkdir -p dist
+          cp entry/build/default/outputs/default/*.hap dist/
+          ls -l dist/
+
+      - name: Upload HAP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ohb-release-hap
+          path: dist/*.hap
+          if-no-files-found: error
+
+      - name: Create draft release
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.draft_release == true
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || (inputs.tag_name != '' && inputs.tag_name || format('ci-build-{0}', github.run_number)) }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || (inputs.tag_name != '' && inputs.tag_name || format('CI build {0}', github.run_number)) }}
+          files: dist/*.hap
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
