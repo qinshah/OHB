@@ -73,5 +73,3 @@ jobs:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || (inputs.tag_name != '' && inputs.tag_name || format('ci-build-{0}', github.run_number)) }}
           name: ${{ github.ref_type == 'tag' && github.ref_name || (inputs.tag_name != '' && inputs.tag_name || format('CI build {0}', github.run_number)) }}
           files: dist/*.hap
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
