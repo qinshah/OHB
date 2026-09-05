@@ -26,9 +26,9 @@ export struct DynamicDetailPage {
   build() {
     Column() {
       Row() {
-        Text('‹')
-          .fontSize(24)
-          .fontColor(AppColors.TEXT_PRIMARY)
+        SymbolGlyph($r('sys.symbol.chevron_left'))
+          .fontSize(20)
+          .fontColor([AppColors.TEXT_PRIMARY])
           .width(32)
           .onClick(() => {
             Route.pop();
@@ -150,8 +150,9 @@ export struct DynamicDetailPage {
             // 互动条
             Row() {
               Row({ space: 4 }) {
-                Text(this.vm.item.isLiked ? '❤️' : '🤍')
+                SymbolGlyph(this.vm.item.isLiked ? $r('sys.symbol.heart_fill') : $r('sys.symbol.heart'))
                   .fontSize(16)
+                  .fontColor([this.vm.item.isLiked ? AppColors.BRAND : AppColors.TEXT_SECONDARY])
                 Text(`${this.vm.item.likeCount}`)
                   .fontSize(12)
                   .fontColor(this.vm.item.isLiked ? AppColors.BRAND : AppColors.TEXT_SECONDARY)

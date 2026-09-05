@@ -146,8 +146,9 @@ export struct MinePage {
             ForEach(FEATURE_ENTRIES, (entry: MineFeatureEntry) => {
               GridItem() {
                 Column({ space: 4 }) {
-                  Text(entry.icon)
+                  SymbolGlyph(entry.icon)
                     .fontSize(22)
+                    .fontColor([AppColors.TEXT_PRIMARY])
                   Text(entry.label)
                     .fontSize(12)
                     .fontColor(AppColors.TEXT_PRIMARY)
@@ -176,9 +177,9 @@ export struct MinePage {
             .fontSize(14)
             .fontColor(AppColors.TEXT_PRIMARY)
           Blank()
-          Text('›')
-            .fontSize(20)
-            .fontColor(AppColors.TEXT_SECONDARY)
+          SymbolGlyph($r('sys.symbol.chevron_right'))
+            .fontSize(16)
+            .fontColor([AppColors.TEXT_SECONDARY])
         }
         .width('100%')
         .padding(14)
@@ -195,9 +196,9 @@ export struct MinePage {
             .fontSize(14)
             .fontColor(AppColors.TEXT_PRIMARY)
           Blank()
-          Text('›')
-            .fontSize(20)
-            .fontColor(AppColors.TEXT_SECONDARY)
+          SymbolGlyph($r('sys.symbol.chevron_right'))
+            .fontSize(16)
+            .fontColor([AppColors.TEXT_SECONDARY])
         }
         .width('100%')
         .padding(14)
@@ -226,18 +227,19 @@ export struct MinePage {
 /** 我的页功能入口 */
 interface MineFeatureEntry {
   label: string;
-  icon: string;
+  icon: Resource;
   route: RoutePage;
   param?: Object;
 }
 
+// 统一使用 ArkUI 系统图标（sys.symbol），禁止 emoji / Unicode 符号
 const FEATURE_ENTRIES: MineFeatureEntry[] = [
-  { label: '直播', icon: '📺', route: Route.live },
-  { label: '番剧', icon: '🎬', route: Route.bangumi },
-  { label: '音乐', icon: '🎵', route: Route.music },
-  { label: '收藏', icon: '⭐', route: Route.favorites },
-  { label: '历史', icon: '🕘', route: Route.history },
-  { label: '稍后再看', icon: '▶️', route: Route.watchLater },
-  { label: '发布动态', icon: '✏️', route: Route.publishDynamic },
-  { label: '话题广场', icon: '🏷️', route: Route.topic }
+  { label: '直播', icon: $r('sys.symbol.dot_radiowaves_left_and_right'), route: Route.live },
+  { label: '番剧', icon: $r('sys.symbol.film'), route: Route.bangumi },
+  { label: '音乐', icon: $r('sys.symbol.music_note_list'), route: Route.music },
+  { label: '收藏', icon: $r('sys.symbol.star'), route: Route.favorites },
+  { label: '历史', icon: $r('sys.symbol.clock_arrow_2_circlepath'), route: Route.history },
+  { label: '稍后再看', icon: $r('sys.symbol.clock'), route: Route.watchLater },
+  { label: '发布动态', icon: $r('sys.symbol.square_and_pencil'), route: Route.publishDynamic },
+  { label: '话题广场', icon: $r('sys.symbol.hash'), route: Route.topic }
 ];

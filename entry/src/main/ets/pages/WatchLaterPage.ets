@@ -19,9 +19,9 @@ export struct WatchLaterPage {
   build() {
     Column() {
       Row() {
-        Text('‹')
-          .fontSize(24)
-          .fontColor(AppColors.TEXT_PRIMARY)
+        SymbolGlyph($r('sys.symbol.chevron_left'))
+          .fontSize(20)
+          .fontColor([AppColors.TEXT_PRIMARY])
           .width(32)
           .onClick(() => {
             Route.pop();

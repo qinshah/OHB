@@ -169,8 +169,9 @@ export struct CommentSection {
 
         // 点赞
         Row({ space: 4 }) {
-          Text(item.liked === 1 ? '👍' : '👍🏻')
+          SymbolGlyph(item.liked === 1 ? $r('sys.symbol.hand_thumbsup_fill') : $r('sys.symbol.hand_thumbsup'))
             .fontSize(13)
+            .fontColor([item.liked === 1 ? AppColors.BRAND : AppColors.TEXT_SECONDARY])
           Text(`${item.likeCount}`)
             .fontSize(12)
             .fontColor(item.liked === 1 ? AppColors.BRAND : AppColors.TEXT_SECONDARY)

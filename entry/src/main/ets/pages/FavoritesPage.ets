@@ -27,9 +27,9 @@ export struct FavoritesPage {
   build() {
     Column() {
       Row() {
-        Text('‹')
-          .fontSize(24)
-          .fontColor(AppColors.TEXT_PRIMARY)
+        SymbolGlyph($r('sys.symbol.chevron_left'))
+          .fontSize(20)
+          .fontColor([AppColors.TEXT_PRIMARY])
           .width(32)
           .onClick(() => {
             Route.pop();
@@ -82,9 +82,9 @@ export struct FavoritesPage {
                 }
                 .alignItems(HorizontalAlign.Start)
                 .layoutWeight(1)
-                Text('›')
-                  .fontSize(20)
-                  .fontColor(AppColors.TEXT_SECONDARY)
+                SymbolGlyph($r('sys.symbol.chevron_right'))
+                  .fontSize(16)
+                  .fontColor([AppColors.TEXT_SECONDARY])
               }
               .width('100%')
               .padding(10)

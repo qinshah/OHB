@@ -249,19 +249,22 @@ export default struct VideoDetailPage {
 
       // 互动操作栏
       Row() {
-        this.ActionItem(this.vm.liked ? '❤️' : '🤍', `${this.vm.detail!.like}`,
+        this.ActionItem(this.vm.liked ? $r('sys.symbol.heart_fill') : $r('sys.symbol.heart'),
+          `${this.vm.detail!.like}`,
           this.vm.liked ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
             this.vm.like();
           })
-        this.ActionItem('🪙', `${this.vm.detail!.coin}`,
+        this.ActionItem($r('sys.symbol.coins'), `${this.vm.detail!.coin}`,
           this.vm.coined ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
             this.vm.coin();
           })
-        this.ActionItem(this.vm.favorited ? '⭐' : '☆', `${this.vm.detail!.favorite}`,
+        this.ActionItem(this.vm.favorited ? $r('sys.symbol.star_fill') : $r('sys.symbol.star'),
+          `${this.vm.detail!.favorite}`,
           this.vm.favorited ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
             this.vm.favorite(0);
           })
-        this.ActionItem(this.vm.watchLaterAdded ? '✅' : '⏱️', '稍后再看',
+        this.ActionItem(this.vm.watchLaterAdded ? $r('sys.symbol.checkmark_circle_fill') : $r('sys.symbol.clock'),
+          '稍后再看',
           this.vm.watchLaterAdded ? AppColors.BRAND : AppColors.TEXT_SECONDARY, () => {
             this.vm.addWatchLater();
           })
@@ -429,10 +432,11 @@ export default struct VideoDetailPage {
   }
 
   @Builder
-  ActionItem(icon: string, label: string, color: ResourceColor, onTap: () => void) {
+  ActionItem(icon: Resource, label: string, color: ResourceColor, onTap: () => void) {
     Column({ space: 2 }) {
-      Text(icon)
+      SymbolGlyph(icon)
         .fontSize(18)
+        .fontColor([color])
       Text(label)
         .fontSize(10)
         .fontColor(color)
