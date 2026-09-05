@@ -20,75 +20,78 @@ export struct LivePage {
   }
 
   build() {
-    Column() {
-      // 标题栏
-      Row() {
-        SymbolGlyph($r('sys.symbol.chevron_left'))
-          .fontSize(20)
-          .fontColor([AppColors.TEXT_PRIMARY])
-          .width(32)
-          .onClick(() => {
-            Route.pop();
+    NavDestination() {
+      Column() {
+        // 标题栏
+        Row() {
+          SymbolGlyph($r('sys.symbol.chevron_left'))
+            .fontSize(20)
+            .fontColor([AppColors.TEXT_PRIMARY])
+            .width(32)
+            .onClick(() => {
+              Route.pop();
+            })
+          Text('直播')
+            .fontSize(17)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColors.TEXT_PRIMARY)
+            .layoutWeight(1)
+        }
+        .width('100%')
+        .padding({ left: 8, right: 12, top: 8, bottom: 4 })
+
+        // 分区栏
+        if (this.vm.areaState.status === DataStatus.Data) {
+          Scroll() {
+            Row({ space: 8 }) {
+              this.AreaTag(0, '全部')
+              ForEach(this.vm.areas, (area: LiveArea) => {
+                this.AreaTag(area.id, area.name)
+              }, (area: LiveArea) => `${area.id}`)
+            }
+            .padding({ left: 12, right: 12, top: 4, bottom: 8 })
+          }
+          .scrollable(ScrollDirection.Horizontal)
+          .scrollBar(BarState.Off)
+          .width('100%')
+        }
+
+        // 直播间列表
+        if (this.vm.roomState.status === DataStatus.Loading) {
+          LoadingView()
+            .layoutWeight(1)
+        } else if (this.vm.roomState.status === DataStatus.Error && this.vm.rooms.length === 0) {
+          ErrorView({
+            message: this.vm.errorMessage,
+            retryable: true,
+            onRetry: () => {
+              this.vm.loadFirst(this.vm.currentAreaId);
+            }
           })
-        Text('直播')
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TEXT_PRIMARY)
+            .layoutWeight(1)
+        } else if (this.vm.roomState.status === DataStatus.Empty) {
+          EmptyView({ tip: '该分区暂无直播' })
+            .layoutWeight(1)
+        } else {
+          List({ space: 8 }) {
+            ForEach(this.vm.rooms, (room: LiveRoom) => {
+              ListItem() {
+                this.LiveCard(room)
+              }
+            }, (room: LiveRoom) => `${room.roomId}`)
+          }
+          .padding(8)
+          .onReachEnd(() => {
+            this.vm.loadMore();
+          })
           .layoutWeight(1)
+        }
       }
       .width('100%')
-      .padding({ left: 8, right: 12, top: 8, bottom: 4 })
-
-      // 分区栏
-      if (this.vm.areaState.status === DataStatus.Data) {
-        Scroll() {
-          Row({ space: 8 }) {
-            this.AreaTag(0, '全部')
-            ForEach(this.vm.areas, (area: LiveArea) => {
-              this.AreaTag(area.id, area.name)
-            }, (area: LiveArea) => `${area.id}`)
-          }
-          .padding({ left: 12, right: 12, top: 4, bottom: 8 })
-        }
-        .scrollable(ScrollDirection.Horizontal)
-        .scrollBar(BarState.Off)
-        .width('100%')
-      }
-
-      // 直播间列表
-      if (this.vm.roomState.status === DataStatus.Loading) {
-        LoadingView()
-          .layoutWeight(1)
-      } else if (this.vm.roomState.status === DataStatus.Error && this.vm.rooms.length === 0) {
-        ErrorView({
-          message: this.vm.errorMessage,
-          retryable: true,
-          onRetry: () => {
-            this.vm.loadFirst(this.vm.currentAreaId);
-          }
-        })
-          .layoutWeight(1)
-      } else if (this.vm.roomState.status === DataStatus.Empty) {
-        EmptyView({ tip: '该分区暂无直播' })
-          .layoutWeight(1)
-      } else {
-        List({ space: 8 }) {
-          ForEach(this.vm.rooms, (room: LiveRoom) => {
-            ListItem() {
-              this.LiveCard(room)
-            }
-          }, (room: LiveRoom) => `${room.roomId}`)
-        }
-        .padding(8)
-        .onReachEnd(() => {
-          this.vm.loadMore();
-        })
-        .layoutWeight(1)
-      }
+      .height('100%')
+      .backgroundColor(AppColors.PAGE_BG)
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(AppColors.PAGE_BG)
+    .hideTitleBar(true)
   }
 
   @Builder

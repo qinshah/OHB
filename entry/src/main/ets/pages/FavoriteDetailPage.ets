@@ -20,67 +20,70 @@ export struct FavoriteDetailPage {
   }
 
   build() {
-    Column() {
-      Row() {
-        SymbolGlyph($r('sys.symbol.chevron_left'))
-          .fontSize(20)
-          .fontColor([AppColors.TEXT_PRIMARY])
-          .width(32)
-          .onClick(() => {
-            Route.pop();
+    NavDestination() {
+      Column() {
+        Row() {
+          SymbolGlyph($r('sys.symbol.chevron_left'))
+            .fontSize(20)
+            .fontColor([AppColors.TEXT_PRIMARY])
+            .width(32)
+            .onClick(() => {
+              Route.pop();
+            })
+          Text(this.title)
+            .fontSize(17)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColors.TEXT_PRIMARY)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
+        }
+        .width('100%')
+        .padding({ left: 8, right: 12, top: 8, bottom: 4 })
+
+        if (this.vm.tipText.length > 0) {
+          Text(this.vm.tipText)
+            .fontSize(12)
+            .fontColor(AppColors.BRAND)
+            .width('100%')
+            .padding({ left: 12, right: 12 })
+        }
+
+        if (this.vm.mediaState.status === DataStatus.Loading) {
+          LoadingView()
+            .layoutWeight(1)
+        } else if (this.vm.mediaState.status === DataStatus.Error && this.vm.medias.length === 0) {
+          ErrorView({
+            message: this.vm.errorMessage,
+            retryable: true,
+            onRetry: () => {
+              this.vm.loadMediaFirst(this.mediaId);
+            }
           })
-        Text(this.title)
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TEXT_PRIMARY)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
+        } else if (this.vm.mediaState.status === DataStatus.Empty) {
+          EmptyView({ tip: '收藏夹是空的' })
+            .layoutWeight(1)
+        } else {
+          List({ space: 8 }) {
+            ForEach(this.vm.medias, (media: FavoriteMedia) => {
+              ListItem() {
+                this.MediaRow(media)
+              }
+            }, (media: FavoriteMedia) => `${media.id}`)
+          }
+          .padding(8)
+          .onReachEnd(() => {
+            this.vm.loadMoreMedia();
+          })
           .layoutWeight(1)
+        }
       }
       .width('100%')
-      .padding({ left: 8, right: 12, top: 8, bottom: 4 })
-
-      if (this.vm.tipText.length > 0) {
-        Text(this.vm.tipText)
-          .fontSize(12)
-          .fontColor(AppColors.BRAND)
-          .width('100%')
-          .padding({ left: 12, right: 12 })
-      }
-
-      if (this.vm.mediaState.status === DataStatus.Loading) {
-        LoadingView()
-          .layoutWeight(1)
-      } else if (this.vm.mediaState.status === DataStatus.Error && this.vm.medias.length === 0) {
-        ErrorView({
-          message: this.vm.errorMessage,
-          retryable: true,
-          onRetry: () => {
-            this.vm.loadMediaFirst(this.mediaId);
-          }
-        })
-          .layoutWeight(1)
-      } else if (this.vm.mediaState.status === DataStatus.Empty) {
-        EmptyView({ tip: '收藏夹是空的' })
-          .layoutWeight(1)
-      } else {
-        List({ space: 8 }) {
-          ForEach(this.vm.medias, (media: FavoriteMedia) => {
-            ListItem() {
-              this.MediaRow(media)
-            }
-          }, (media: FavoriteMedia) => `${media.id}`)
-        }
-        .padding(8)
-        .onReachEnd(() => {
-          this.vm.loadMoreMedia();
-        })
-        .layoutWeight(1)
-      }
+      .height('100%')
+      .backgroundColor(AppColors.PAGE_BG)
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(AppColors.PAGE_BG)
+    .hideTitleBar(true)
   }
 
   @Builder

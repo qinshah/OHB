@@ -33,49 +33,52 @@ export struct BangumiPage {
   }
 
   build() {
-    Column() {
-      Row() {
-        SymbolGlyph($r('sys.symbol.chevron_left'))
-          .fontSize(20)
-          .fontColor([AppColors.TEXT_PRIMARY])
-          .width(32)
-          .onClick(() => {
-            Route.pop();
-          })
-        Text('番剧')
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TEXT_PRIMARY)
-          .layoutWeight(1)
+    NavDestination() {
+      Column() {
+        Row() {
+          SymbolGlyph($r('sys.symbol.chevron_left'))
+            .fontSize(20)
+            .fontColor([AppColors.TEXT_PRIMARY])
+            .width(32)
+            .onClick(() => {
+              Route.pop();
+            })
+          Text('番剧')
+            .fontSize(17)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColors.TEXT_PRIMARY)
+            .layoutWeight(1)
+        }
+        .width('100%')
+        .padding({ left: 8, right: 12, top: 8, bottom: 4 })
+
+        Tabs({ index: $$this.currentTabIdx }) {
+          TabContent() {
+            this.RankList()
+          }
+          .tabBar('排行榜')
+
+          TabContent() {
+            this.IndexList()
+          }
+          .tabBar('索引')
+        }
+        .barHeight(40)
+        .layoutWeight(1)
+        .onChange((idx: number) => {
+          this.currentTabIdx = idx;
+          if (idx === 0) {
+            this.vm.loadRank(1, 3);
+          } else {
+            this.vm.loadIndexFirst(1, ORDER_OPTIONS[this.orderIndex].value, 0);
+          }
+        })
       }
       .width('100%')
-      .padding({ left: 8, right: 12, top: 8, bottom: 4 })
-
-      Tabs({ index: $$this.currentTabIdx }) {
-        TabContent() {
-          this.RankList()
-        }
-        .tabBar('排行榜')
-
-        TabContent() {
-          this.IndexList()
-        }
-        .tabBar('索引')
-      }
-      .barHeight(40)
-      .layoutWeight(1)
-      .onChange((idx: number) => {
-        this.currentTabIdx = idx;
-        if (idx === 0) {
-          this.vm.loadRank(1, 3);
-        } else {
-          this.vm.loadIndexFirst(1, ORDER_OPTIONS[this.orderIndex].value, 0);
-        }
-      })
+      .height('100%')
+      .backgroundColor(AppColors.PAGE_BG)
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(AppColors.PAGE_BG)
+    .hideTitleBar(true)
   }
 
   @Builder

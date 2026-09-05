@@ -21,59 +21,62 @@ export struct TopicFeedPage {
   }
 
   build() {
-    Column() {
-      Row() {
-        SymbolGlyph($r('sys.symbol.chevron_left'))
-          .fontSize(20)
-          .fontColor([AppColors.TEXT_PRIMARY])
-          .width(32)
-          .onClick(() => {
-            Route.pop();
+    NavDestination() {
+      Column() {
+        Row() {
+          SymbolGlyph($r('sys.symbol.chevron_left'))
+            .fontSize(20)
+            .fontColor([AppColors.TEXT_PRIMARY])
+            .width(32)
+            .onClick(() => {
+              Route.pop();
+            })
+          Text(`# ${this.topicName}`)
+            .fontSize(17)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColors.TEXT_PRIMARY)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
+        }
+        .width('100%')
+        .padding({ left: 8, right: 12, top: 8, bottom: 4 })
+
+        if (this.vm.feedState.status === DataStatus.Loading) {
+          LoadingView()
+            .layoutWeight(1)
+        } else if (this.vm.feedState.status === DataStatus.Error && this.vm.feedItems.length === 0) {
+          ErrorView({
+            message: this.vm.errorMessage,
+            retryable: true,
+            onRetry: () => {
+              this.vm.loadFeedFirst(this.topicId);
+            }
           })
-        Text(`# ${this.topicName}`)
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TEXT_PRIMARY)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .layoutWeight(1)
+        } else if (this.vm.feedState.status === DataStatus.Empty) {
+          EmptyView({ tip: '话题下暂无动态' })
+            .layoutWeight(1)
+        } else {
+          List({ space: 8 }) {
+            ForEach(this.vm.feedItems, (card: TopicFeedCard) => {
+              ListItem() {
+                this.FeedCard(card)
+              }
+            }, (card: TopicFeedCard) => card.idStr)
+          }
+          .padding(8)
+          .onReachEnd(() => {
+            this.vm.loadMoreFeed();
+          })
           .layoutWeight(1)
+        }
       }
       .width('100%')
-      .padding({ left: 8, right: 12, top: 8, bottom: 4 })
-
-      if (this.vm.feedState.status === DataStatus.Loading) {
-        LoadingView()
-          .layoutWeight(1)
-      } else if (this.vm.feedState.status === DataStatus.Error && this.vm.feedItems.length === 0) {
-        ErrorView({
-          message: this.vm.errorMessage,
-          retryable: true,
-          onRetry: () => {
-            this.vm.loadFeedFirst(this.topicId);
-          }
-        })
-          .layoutWeight(1)
-      } else if (this.vm.feedState.status === DataStatus.Empty) {
-        EmptyView({ tip: '话题下暂无动态' })
-          .layoutWeight(1)
-      } else {
-        List({ space: 8 }) {
-          ForEach(this.vm.feedItems, (card: TopicFeedCard) => {
-            ListItem() {
-              this.FeedCard(card)
-            }
-          }, (card: TopicFeedCard) => card.idStr)
-        }
-        .padding(8)
-        .onReachEnd(() => {
-          this.vm.loadMoreFeed();
-        })
-        .layoutWeight(1)
-      }
+      .height('100%')
+      .backgroundColor(AppColors.PAGE_BG)
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(AppColors.PAGE_BG)
+    .hideTitleBar(true)
   }
 
   @Builder

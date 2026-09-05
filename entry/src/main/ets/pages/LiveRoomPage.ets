@@ -71,127 +71,130 @@ export struct LiveRoomPage {
   }
 
   build() {
-    Column() {
-      // ===== 播放区 =====
-      Stack() {
-        // TODO 视频
-        // .width('100%')
-        // .height('100%')
-        // .backgroundColor(Color.Black)
+    NavDestination() {
+      Column() {
+        // ===== 播放区 =====
+        Stack() {
+          // TODO 视频
+          // .width('100%')
+          // .height('100%')
+          // .backgroundColor(Color.Black)
 
-        // 返回 + 标题
-        Row({ space: 6 }) {
-          SymbolGlyph($r('sys.symbol.chevron_left'))
-            .fontSize(20)
-            .fontColor([Color.White])
-            .padding(6)
-            .onClick(() => {
-              Route.pop();
-            })
-          Text(this.vm.playInfo?.title ?? this.title)
-            .fontSize(14)
-            .fontColor(Color.White)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .layoutWeight(1)
-          Text(this.vm.playInfo !== null ? `${this.vm.playInfo.online}观看` : '')
-            .fontSize(11)
-            .fontColor(Color.White)
-        }
-        .width('100%')
-        .padding({ left: 6, right: 12, top: 6 })
-        .backgroundColor('#33000000')
-
-        // 播放/暂停
-        if (this.playing) {
-          Stack() {
-            SymbolGlyph($r('sys.symbol.pause_fill'))
+          // 返回 + 标题
+          Row({ space: 6 }) {
+            SymbolGlyph($r('sys.symbol.chevron_left'))
               .fontSize(20)
               .fontColor([Color.White])
+              .padding(6)
+              .onClick(() => {
+                Route.pop();
+              })
+            Text(this.vm.playInfo?.title ?? this.title)
+              .fontSize(14)
+              .fontColor(Color.White)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .layoutWeight(1)
+            Text(this.vm.playInfo !== null ? `${this.vm.playInfo.online}观看` : '')
+              .fontSize(11)
+              .fontColor(Color.White)
           }
-          .width(40)
-          .height(40)
-          .borderRadius(20)
-          .backgroundColor('#66000000')
-          .onClick(() => {
-            this.cntlr.togglePlay();
-          })
-        }
-      }
-      .width('100%')
-      .aspectRatio(16 / 9)
-      .backgroundColor(Color.Black)
+          .width('100%')
+          .padding({ left: 6, right: 12, top: 6 })
+          .backgroundColor('#33000000')
 
-      // ===== 弹幕区 =====
-      Scroll(this.scroller) {
-        Column({ space: 4 }) {
-          ForEach(this.vm.danmaku, (msg: DanmakuMessage) => {
-            Row({ space: 6 }) {
-              Text(msg.uname)
-                .fontSize(12)
-                .fontColor(AppColors.BRAND)
-                .maxLines(1)
-              Text(msg.text)
-                .fontSize(13)
-                .fontColor(AppColors.TEXT_PRIMARY)
-                .layoutWeight(1)
+          // 播放/暂停
+          if (this.playing) {
+            Stack() {
+              SymbolGlyph($r('sys.symbol.pause_fill'))
+                .fontSize(20)
+                .fontColor([Color.White])
             }
-            .width('100%')
-            .alignItems(VerticalAlign.Top)
-          }, (msg: DanmakuMessage) => `${msg.ts}_${msg.uid}_${msg.text}`)
+            .width(40)
+            .height(40)
+            .borderRadius(20)
+            .backgroundColor('#66000000')
+            .onClick(() => {
+              this.cntlr.togglePlay();
+            })
+          }
         }
         .width('100%')
-        .padding(10)
-        .alignItems(HorizontalAlign.Start)
-      }
-      .layoutWeight(1)
-      .scrollBar(BarState.Off)
+        .aspectRatio(16 / 9)
+        .backgroundColor(Color.Black)
 
-      // ===== 底部输入 =====
-      Row({ space: 8 }) {
-        TextInput({ text: $$this.inputText, placeholder: '发个友善的弹幕见证当下' })
-          .layoutWeight(1)
-          .height(36)
-          .fontSize(13)
-          .backgroundColor(AppColors.CARD_BG)
-          .borderRadius(18)
-          .padding({ left: 14, right: 14 })
-          .onSubmit(() => {
-            this.sendDanmaku();
-          })
-        Button('发送')
-          .height(36)
-          .fontSize(13)
-          .backgroundColor(AppColors.BRAND)
-          .fontColor(Color.White)
-          .enabled(!this.vm.isSending)
-          .onClick(() => {
-            this.sendDanmaku();
-          })
-        Text('屏蔽')
-          .fontSize(12)
-          .fontColor(AppColors.TEXT_SECONDARY)
-          .onClick(() => {
-            this.showShieldPanel = true;
-          })
+        // ===== 弹幕区 =====
+        Scroll(this.scroller) {
+          Column({ space: 4 }) {
+            ForEach(this.vm.danmaku, (msg: DanmakuMessage) => {
+              Row({ space: 6 }) {
+                Text(msg.uname)
+                  .fontSize(12)
+                  .fontColor(AppColors.BRAND)
+                  .maxLines(1)
+                Text(msg.text)
+                  .fontSize(13)
+                  .fontColor(AppColors.TEXT_PRIMARY)
+                  .layoutWeight(1)
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Top)
+            }, (msg: DanmakuMessage) => `${msg.ts}_${msg.uid}_${msg.text}`)
+          }
+          .width('100%')
+          .padding(10)
+          .alignItems(HorizontalAlign.Start)
+        }
+        .layoutWeight(1)
+        .scrollBar(BarState.Off)
+
+        // ===== 底部输入 =====
+        Row({ space: 8 }) {
+          TextInput({ text: $$this.inputText, placeholder: '发个友善的弹幕见证当下' })
+            .layoutWeight(1)
+            .height(36)
+            .fontSize(13)
+            .backgroundColor(AppColors.CARD_BG)
+            .borderRadius(18)
+            .padding({ left: 14, right: 14 })
+            .onSubmit(() => {
+              this.sendDanmaku();
+            })
+          Button('发送')
+            .height(36)
+            .fontSize(13)
+            .backgroundColor(AppColors.BRAND)
+            .fontColor(Color.White)
+            .enabled(!this.vm.isSending)
+            .onClick(() => {
+              this.sendDanmaku();
+            })
+          Text('屏蔽')
+            .fontSize(12)
+            .fontColor(AppColors.TEXT_SECONDARY)
+            .onClick(() => {
+              this.showShieldPanel = true;
+            })
+        }
+        .width('100%')
+        .padding({
+          left: 10,
+          right: 10,
+          top: 8,
+          bottom: 8
+        })
+        .backgroundColor(AppColors.PAGE_BG)
+
+        // 屏蔽词面板
+        if (this.showShieldPanel) {
+          this.ShieldPanel()
+        }
       }
       .width('100%')
-      .padding({
-        left: 10,
-        right: 10,
-        top: 8,
-        bottom: 8
-      })
+      .height('100%')
       .backgroundColor(AppColors.PAGE_BG)
-
-      // 屏蔽词面板
-      if (this.showShieldPanel) {
-        this.ShieldPanel()
-      }
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(AppColors.PAGE_BG)
+    .hideTitleBar(true)
   }
 
   @Builder

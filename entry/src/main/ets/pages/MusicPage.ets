@@ -18,61 +18,64 @@ export struct MusicPage {
   }
 
   build() {
-    Column() {
-      Row() {
-        SymbolGlyph($r('sys.symbol.chevron_left'))
-          .fontSize(20)
-          .fontColor([AppColors.TEXT_PRIMARY])
-          .width(32)
-          .onClick(() => {
-            Route.pop();
+    NavDestination() {
+      Column() {
+        Row() {
+          SymbolGlyph($r('sys.symbol.chevron_left'))
+            .fontSize(20)
+            .fontColor([AppColors.TEXT_PRIMARY])
+            .width(32)
+            .onClick(() => {
+              Route.pop();
+            })
+          Text('音乐')
+            .fontSize(17)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColors.TEXT_PRIMARY)
+            .layoutWeight(1)
+        }
+        .width('100%')
+        .padding({ left: 8, right: 12, top: 8, bottom: 4 })
+
+        if (this.vm.state.status === DataStatus.Loading) {
+          LoadingView()
+            .layoutWeight(1)
+        } else if (this.vm.state.status === DataStatus.Error) {
+          ErrorView({
+            message: this.vm.errorMessage,
+            retryable: true,
+            onRetry: () => {
+              this.vm.load();
+            }
           })
-        Text('音乐')
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(AppColors.TEXT_PRIMARY)
+            .layoutWeight(1)
+        } else if (this.vm.state.status === DataStatus.Empty) {
+          EmptyView({ tip: '暂无音乐内容' })
+            .layoutWeight(1)
+        } else {
+          WaterFlow() {
+            ForEach(this.vm.items, (item: VideoCard) => {
+              FlowItem() {
+                VideoCardView({
+                  card: item,
+                  onCardClick: (bvid: string) => {
+                    Route.push(Route.video, bvid);
+                  }
+                })
+              }
+            }, (item: VideoCard) => item.bvid)
+          }
+          .columnsTemplate('1fr 1fr')
+          .columnsGap(8)
+          .rowsGap(8)
+          .padding(8)
           .layoutWeight(1)
+        }
       }
       .width('100%')
-      .padding({ left: 8, right: 12, top: 8, bottom: 4 })
-
-      if (this.vm.state.status === DataStatus.Loading) {
-        LoadingView()
-          .layoutWeight(1)
-      } else if (this.vm.state.status === DataStatus.Error) {
-        ErrorView({
-          message: this.vm.errorMessage,
-          retryable: true,
-          onRetry: () => {
-            this.vm.load();
-          }
-        })
-          .layoutWeight(1)
-      } else if (this.vm.state.status === DataStatus.Empty) {
-        EmptyView({ tip: '暂无音乐内容' })
-          .layoutWeight(1)
-      } else {
-        WaterFlow() {
-          ForEach(this.vm.items, (item: VideoCard) => {
-            FlowItem() {
-              VideoCardView({
-                card: item,
-                onCardClick: (bvid: string) => {
-                  Route.push(Route.video, bvid);
-                }
-              })
-            }
-          }, (item: VideoCard) => item.bvid)
-        }
-        .columnsTemplate('1fr 1fr')
-        .columnsGap(8)
-        .rowsGap(8)
-        .padding(8)
-        .layoutWeight(1)
-      }
+      .height('100%')
+      .backgroundColor(AppColors.PAGE_BG)
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(AppColors.PAGE_BG)
+    .hideTitleBar(true)
   }
 }
