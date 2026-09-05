@@ -107,5 +107,6 @@ export struct TopicPage {
       .height('100%')
       .backgroundColor(AppColors.PAGE_BG)
     }
+    .hideTitleBar(true)
   }
 }

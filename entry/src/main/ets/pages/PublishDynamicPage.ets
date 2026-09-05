@@ -82,6 +82,7 @@ export struct PublishDynamicPage {
       .backgroundColor(AppColors.PAGE_BG)
       .alignItems(HorizontalAlign.Start)
     }
+    .hideTitleBar(true)
   }
 
   private async publish(): Promise<void> {
