@@ -57,13 +57,13 @@ export struct MinePage {
     .layoutWeight(1)
   }
 
-  /** 功能宫格项 */
+  /** 功能宫格项（图标用 B 站原版蓝色） */
   @Builder
   FeatureItem(icon: Resource, labelRes: Resource, onTap: () => void) {
     Column({ space: 6 }) {
       SymbolGlyph(icon)
         .fontSize(26)
-        .fontColor([AppColors.TEXT_PRIMARY])
+        .fontColor([MINE_ICON_BLUE])
       Text(labelRes)
         .fontSize(12)
         .fontColor(AppColors.TEXT_PRIMARY)
@@ -77,10 +77,13 @@ export struct MinePage {
     })
   }
 
-  /** 通用设置行（检查更新 / 设置） */
+  /** 通用设置行（左侧图标 + 文案 + 右箭头） */
   @Builder
-  SettingRow(labelRes: Resource, onTap: () => void) {
-    Row() {
+  SettingRow(icon: Resource, labelRes: Resource, onTap: () => void) {
+    Row({ space: 10 }) {
+      SymbolGlyph(icon)
+        .fontSize(18)
+        .fontColor([MINE_ICON_BLUE])
       Text(labelRes)
         .fontSize(14)
         .fontColor(AppColors.TEXT_PRIMARY)
@@ -302,13 +305,13 @@ export struct MinePage {
           .margin({ top: 16 })
         }
 
-        // 检查更新 / 设置
+        // 检查更新 / 设置（文字左侧带蓝色图标，对齐 B 站"更多服务"样式）
         Column({ space: 8 }) {
-          this.SettingRow($r('app.string.mine_check_update'), (): void => {
+          this.SettingRow($r('sys.symbol.arrow_down_circle'), $r('app.string.mine_check_update'), (): void => {
             // 手动检查：有结果提示（已是最新 / 失败 / 发现新版本弹窗）
             UpdateUtils.checkUpdate(false);
           })
-          this.SettingRow($r('app.string.mine_settings'), (): void => {
+          this.SettingRow($r('sys.symbol.gearshape'), $r('app.string.mine_settings'), (): void => {
             Route.push(Route.settings);
           })
         }
@@ -332,3 +335,6 @@ export struct MinePage {
     .scrollBar(BarState.Off)
   }
 }
+
+// B 站原版"我的"页功能图标蓝（对齐截图宫格/更多服务图标色）
+const MINE_ICON_BLUE: string = '#5090F2';

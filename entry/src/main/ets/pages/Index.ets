@@ -104,6 +104,8 @@ struct Index {
       }
       .barOverlap(true)
       .barPosition(BarPosition.End)
+      // 禁用滑动切换子页面：左右滑动手势让给首页内部分区 tabs
+      .scrollable(false)
       .barFloatingStyle({
         adaptToHandedness: true,
         barBottomMargin: this.bottomRectHeight / 2,
@@ -152,6 +154,8 @@ struct Index {
       }
       .barHeight('auto')
       .barBackgroundColor(AppColors.CARD_BG)
+      // 禁用滑动切换子页面：左右滑动手势让给首页内部分区 tabs
+      .scrollable(false)
       .onChange((idx: number) => {
         this.vm.idx = idx;
       })

@@ -9,10 +9,16 @@ import { LiveRoomParam } from './RouteParams';
 
 /**
  * 直播页（P2 Task 15）：分区 Tab + 直播间列表，点击进入直播间。
+ *
+ * 拆分为两个组件：
+ * - LiveTabContent：内容主体（分区栏 + 直播间列表），可嵌入首页 Tabs
+ * - LivePage：NavDestination 包装（独立路由跳转用，带返回标题栏）
  */
 @Component
-export struct LivePage {
+export struct LiveTabContent {
   @State vm: LiveViewModel = new LiveViewModel();
+  /** 滚动回调（转发给宿主页面，驱动搜索排收起/底部栏显隐） */
+  onScrollAction?: (offset: number, state: ScrollState) => void;
 
   aboutToAppear(): void {
     this.vm.loadAreas();
@@ -20,78 +26,61 @@ export struct LivePage {
   }
 
   build() {
-    NavDestination() {
-      Column() {
-        // 标题栏
-        Row() {
-          SymbolGlyph($r('sys.symbol.chevron_left'))
-            .fontSize(20)
-            .fontColor([AppColors.TEXT_PRIMARY])
-            .width(32)
-            .onClick(() => {
-              Route.pop();
-            })
-          Text('直播')
-            .fontSize(17)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(AppColors.TEXT_PRIMARY)
-            .layoutWeight(1)
+    Column() {
+      // 分区栏
+      if (this.vm.areaState.status === DataStatus.Data) {
+        Scroll() {
+          Row({ space: 8 }) {
+            this.AreaTag(0, '全部')
+            ForEach(this.vm.areas, (area: LiveArea) => {
+              this.AreaTag(area.id, area.name)
+            }, (area: LiveArea) => `${area.id}`)
+          }
+          .padding({ left: 12, right: 12, top: 4, bottom: 8 })
         }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
         .width('100%')
-        .padding({ left: 8, right: 12, top: 8, bottom: 4 })
-
-        // 分区栏
-        if (this.vm.areaState.status === DataStatus.Data) {
-          Scroll() {
-            Row({ space: 8 }) {
-              this.AreaTag(0, '全部')
-              ForEach(this.vm.areas, (area: LiveArea) => {
-                this.AreaTag(area.id, area.name)
-              }, (area: LiveArea) => `${area.id}`)
-            }
-            .padding({ left: 12, right: 12, top: 4, bottom: 8 })
-          }
-          .scrollable(ScrollDirection.Horizontal)
-          .scrollBar(BarState.Off)
-          .width('100%')
-        }
-
-        // 直播间列表
-        if (this.vm.roomState.status === DataStatus.Loading) {
-          LoadingView()
-            .layoutWeight(1)
-        } else if (this.vm.roomState.status === DataStatus.Error && this.vm.rooms.length === 0) {
-          ErrorView({
-            message: this.vm.errorMessage,
-            retryable: true,
-            onRetry: () => {
-              this.vm.loadFirst(this.vm.currentAreaId);
-            }
-          })
-            .layoutWeight(1)
-        } else if (this.vm.roomState.status === DataStatus.Empty) {
-          EmptyView({ tip: '该分区暂无直播' })
-            .layoutWeight(1)
-        } else {
-          List({ space: 8 }) {
-            ForEach(this.vm.rooms, (room: LiveRoom) => {
-              ListItem() {
-                this.LiveCard(room)
-              }
-            }, (room: LiveRoom) => `${room.roomId}`)
-          }
-          .padding(8)
-          .onReachEnd(() => {
-            this.vm.loadMore();
-          })
-          .layoutWeight(1)
-        }
       }
-      .width('100%')
-      .height('100%')
-      .backgroundColor(AppColors.PAGE_BG)
+
+      // 直播间列表
+      if (this.vm.roomState.status === DataStatus.Loading) {
+        LoadingView()
+          .layoutWeight(1)
+      } else if (this.vm.roomState.status === DataStatus.Error && this.vm.rooms.length === 0) {
+        ErrorView({
+          message: this.vm.errorMessage,
+          retryable: true,
+          onRetry: () => {
+            this.vm.loadFirst(this.vm.currentAreaId);
+          }
+        })
+          .layoutWeight(1)
+      } else if (this.vm.roomState.status === DataStatus.Empty) {
+        EmptyView({ tip: '该分区暂无直播' })
+          .layoutWeight(1)
+      } else {
+        List({ space: 8 }) {
+          ForEach(this.vm.rooms, (room: LiveRoom) => {
+            ListItem() {
+              this.LiveCard(room)
+            }
+          }, (room: LiveRoom) => `${room.roomId}`)
+        }
+        .padding(8)
+        .scrollBar(BarState.Off)
+        .onDidScroll((offset: number, state: ScrollState) => {
+          this.onScrollAction?.(offset, state);
+        })
+        .onReachEnd(() => {
+          this.vm.loadMore();
+        })
+        .layoutWeight(1)
+      }
     }
-    .hideTitleBar(true)
+    .width('100%')
+    .height('100%')
+    .backgroundColor(AppColors.PAGE_BG)
   }
 
   @Builder
@@ -164,5 +153,40 @@ export struct LivePage {
       const p: LiveRoomParam = { roomId: room.roomId, title: room.title };
       Route.push(Route.liveRoom, p);
     })
+  }
+}
+
+/** 独立路由页包装（带返回标题栏） */
+@Component
+export struct LivePage {
+  build() {
+    NavDestination() {
+      Column() {
+        // 标题栏
+        Row() {
+          SymbolGlyph($r('sys.symbol.chevron_left'))
+            .fontSize(20)
+            .fontColor([AppColors.TEXT_PRIMARY])
+            .width(32)
+            .onClick(() => {
+              Route.pop();
+            })
+          Text('直播')
+            .fontSize(17)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(AppColors.TEXT_PRIMARY)
+            .layoutWeight(1)
+        }
+        .width('100%')
+        .padding({ left: 8, right: 12, top: 8, bottom: 4 })
+
+        // 内容主体
+        LiveTabContent()
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .height('100%')
+    }
+    .hideTitleBar(true)
   }
 }
