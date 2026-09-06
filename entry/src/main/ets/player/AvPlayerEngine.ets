@@ -55,8 +55,8 @@ export class AvPlayerEngine implements IPlayerEngine {
           if (this.surfaceId.length > 0) {
             p.surfaceId = this.surfaceId;
           }
-          // 在 prepare 前设置缩放类型，确保首帧即按正确比例渲染
-          p.videoScaleType = media.VideoScaleType.VIDEO_SCALE_TYPE_FIT;
+          // 注意：videoScaleType 只能在 prepared 及之后状态设置，
+          // initialized 阶段设置会报 5400102（prepared 分支已统一设置）
           p.prepare();
           break;
         case 'prepared':
@@ -152,6 +152,17 @@ export class AvPlayerEngine implements IPlayerEngine {
     const p = await this.ensurePlayer();
     if (this.state === PlaybackState.Released) {
       return;
+    }
+    // 画质切换等场景：播放器已处于 prepared/playing 等高状态，
+    // 直接 setMediaSource 非法（AVPlayer 状态机要求 idle/initialized），
+    // 必须先 reset() 回 idle 再换源（reset 后 initialized→prepare 流程照常走）
+    if (p.state !== 'idle' && p.state !== 'initialized') {
+      Logger.info('AvEngine', `reset before switch source (state=${p.state})`);
+      await p.reset();
+      // reset 回 idle：清空旧进度/时长，等待 initialized→prepare 流程
+      this.positionMs = 0;
+      this.durationMs = 0;
+      this.bufferedMs = 0;
     }
     const strategy: media.PlaybackStrategy = AvPlayerEngine.buildStrategy();
     const hasHeaders = Object.keys(headers).length > 0;
