@@ -6,8 +6,7 @@ import { PlaybackState } from '../player/PlayerTypes';
 import { FormatUtils } from '../common/utils/FormatUtils';
 import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
 import { Pref } from '../services/storage/Pref';
-import { DanmakuSettingsPanel } from './DanmakuSettingsPanel';
-import { hilog } from '@kit.PerformanceAnalysisKit';
+import { DanmakuSettingsDialog } from './DanmakuSettingsPanel';
 
 /** 手势类型：垂直=左亮度/右音量，水平=进度拖拽 */
 enum PlayerGestureType {
@@ -31,7 +30,8 @@ enum HubMode {
  * 1. AVVolumePanel（隐藏，驱动系统音量）
  * 2. Hub（音量/亮度/进度预览，居中，HitTestMode.None 不拦截触控）
  * 3. 手势监听层（全屏：单击切控制层、双击播放/暂停、垂直调音量亮度、水平拖进度）
- * 4. 控制层（最顶层：弹幕设置面板、进度条、播放/暂停、弹幕开关、全屏按钮）
+ * 4. 控制层（最顶层：进度条、播放/暂停、弹幕开关、弹幕设置、全屏按钮；
+ *    弹幕设置以 CustomDialog 弹出，遮罩/返回键关闭走 cancel 回调）
  *
  */
 @Component
@@ -55,8 +55,19 @@ export struct PlayerControlView {
   @State private panelVolumeLevel: number = 0;
   /** 弹幕显示开关镜像（syncUi 每 250ms 同步自 playerVM.danmakuEnabled，驱动按钮图标态） */
   @State private danmakuOn: boolean = true;
-  /** 弹幕设置面板可见（长按控制栏弹幕按钮切换；打开期间控制栏不自动隐藏） */
+  /** 弹幕设置弹窗打开中（打开期间控制栏不自动隐藏） */
   @State private danmakuPanelVisible: boolean = false;
+  /** 弹幕设置弹窗控制器：默认样式（默认 autoCancel，点遮罩/返回键关闭走 cancel 回调） */
+  private danmakuDialogController: CustomDialogController = new CustomDialogController({
+    builder: DanmakuSettingsDialog({
+      onDismissed: () => {
+        this.onDanmakuDialogClosed();
+      }
+    }),
+    cancel: () => {
+      this.onDanmakuDialogClosed();
+    }
+  });
   private hideTimer: number = -1;
   private hubTimer: number = -1;
   private uiTimer: number = -1;
@@ -229,109 +240,95 @@ export struct PlayerControlView {
       .width('100%')
       .height('100%')
 
-      // ===== 4. 控制层（最顶层：进度条、播放/暂停、弹幕开关、全屏按钮）=====
+      // ===== 4. 控制层（最顶层：进度条、播放/暂停、弹幕开关、弹幕设置、全屏按钮）=====
       if (this.controlsVisible) {
-        Column() {
-          // 弹幕设置面板（长按弹幕按钮唤起；右对齐悬浮在控制条上方）
-          if (this.danmakuPanelVisible) {
-            DanmakuSettingsPanel({
-              onClose: () => {
-                this.danmakuPanelVisible = false;
+        // 底部控制条（仅包裹内容高度，不占满全屏）
+        Row({ space: 8 }) {
+          // 播放/暂停
+          Stack() {
+            SymbolGlyph(this.playing ? $r('sys.symbol.pause_fill') : $r('sys.symbol.play_fill'))
+              .fontSize(16)
+              .fontColor([Color.White])
+          }
+          .width(28)
+          .height(28)
+          .onClick(() => {
+            this.playerVM.togglePlay();
+            this.resetHideTimer();
+          })
+
+          Text(FormatUtils.durationMs(this.displayPosition()))
+            .fontSize(11)
+            .fontColor(Color.White)
+
+          Slider({
+            value: this.displayPosition(),
+            min: 0,
+            max: this.durMs > 0 ? this.durMs : 100
+          })
+            .layoutWeight(1)
+            .trackColor('#66FFFFFF')
+            .selectedColor($r('app.color.brand'))
+            .blockColor(Color.White)
+            .onChange((value: number, mode: SliderChangeMode) => {
+              if (mode === SliderChangeMode.Begin || mode === SliderChangeMode.Moving) {
+                this.dragging = true;
+                this.dragValue = value;
+                this.resetHideTimer();
+              }
+              if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
+                this.dragging = false;
+                this.playerVM.seekTo(value);
                 this.resetHideTimer();
               }
             })
-              .alignSelf(ItemAlign.End)
-              .margin({ right: 12, bottom: 6 })
+
+          Text(FormatUtils.durationMs(this.durMs))
+            .fontSize(11)
+            .fontColor(Color.White)
+
+          // 弹幕开关：单击切换显隐（写回 Player + Pref，DanmakuLayer tick 感知）
+          Stack() {
+            SymbolGlyph(this.danmakuOn ? $r('sys.symbol.message_fill') : $r('sys.symbol.message'))
+              .fontSize(18)
+              .fontColor([this.danmakuOn ? '#FFFFFF' : '#80FFFFFF'])
           }
+          .width(28)
+          .height(28)
+          .onClick(() => {
+            this.toggleDanmaku();
+          })
 
-          // 底部控制条（仅包裹内容高度，不占满全屏）
-          Row({ space: 8 }) {
-            // 播放/暂停
-            Stack() {
-              SymbolGlyph(this.playing ? $r('sys.symbol.pause_fill') : $r('sys.symbol.play_fill'))
-                .fontSize(16)
-                .fontColor([Color.White])
-            }
-            .width(28)
-            .height(28)
-            .onClick(() => {
-              this.playerVM.togglePlay();
-              this.resetHideTimer();
-            })
-
-            Text(FormatUtils.durationMs(this.displayPosition()))
-              .fontSize(11)
-              .fontColor(Color.White)
-
-            Slider({
-              value: this.displayPosition(),
-              min: 0,
-              max: this.durMs > 0 ? this.durMs : 100
-            })
-              .layoutWeight(1)
-              .trackColor('#66FFFFFF')
-              .selectedColor($r('app.color.brand'))
-              .blockColor(Color.White)
-              .onChange((value: number, mode: SliderChangeMode) => {
-                if (mode === SliderChangeMode.Begin || mode === SliderChangeMode.Moving) {
-                  this.dragging = true;
-                  this.dragValue = value;
-                  this.resetHideTimer();
-                }
-                if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
-                  this.dragging = false;
-                  this.playerVM.seekTo(value);
-                  this.resetHideTimer();
-                }
-              })
-
-            Text(FormatUtils.durationMs(this.durMs))
-              .fontSize(11)
-              .fontColor(Color.White)
-
-            // 弹幕开关：单击切换显隐（写回 Player + Pref，DanmakuLayer tick 感知）；
-            // 长按弹出设置面板。长按与单击经 GestureGroup 互斥仲裁，不会同时触发
-            Stack() {
-              SymbolGlyph(this.danmakuOn ? $r('sys.symbol.message_fill') : $r('sys.symbol.message'))
-                .fontSize(18)
-                .fontColor([this.danmakuOn ? '#FFFFFF' : '#80FFFFFF'])
-            }
-            .width(28)
-            .height(28)
-            .gesture(
-              GestureGroup(GestureMode.Exclusive,
-                LongPressGesture({ repeat: false, duration: 500 })
-                  .onAction(() => {
-                    this.danmakuPanelVisible = !this.danmakuPanelVisible;
-                    this.resetHideTimer();
-                  }),
-                TapGesture({ count: 1 })
-                  .onAction(() => {
-                    this.toggleDanmaku();
-                  })
-              )
-            )
-
-            // 全屏按钮
-            Stack() {
-              SymbolGlyph(this.playerVM.fullscreen
-                ? $r('sys.symbol.arrow_down_right_and_arrow_up_left')
-                : $r('sys.symbol.arrow_up_left_and_arrow_down_right'))
-                .fontSize(18)
-                .fontColor([Color.White])
-            }
-            .width(28)
-            .height(28)
-            .onClick(() => {
-              this.playerVM.toggleFullscreen();
-              this.resetHideTimer();
-            })
+          // 弹幕设置：弹出设置弹窗（不透明度/字号/显示区域/速度/屏蔽等级/合并）
+          Stack() {
+            SymbolGlyph($r('sys.symbol.slider_horizontal_2'))
+              .fontSize(18)
+              .fontColor([Color.White])
           }
-          .width('100%')
-          .padding({ left: 12, right: 12, bottom: 10 })
-          .alignItems(VerticalAlign.Center)
+          .width(28)
+          .height(28)
+          .onClick(() => {
+            this.openDanmakuSettings();
+          })
+
+          // 全屏按钮
+          Stack() {
+            SymbolGlyph(this.playerVM.fullscreen
+              ? $r('sys.symbol.arrow_down_right_and_arrow_up_left')
+              : $r('sys.symbol.arrow_up_left_and_arrow_down_right'))
+              .fontSize(18)
+              .fontColor([Color.White])
+          }
+          .width(28)
+          .height(28)
+          .onClick(() => {
+            this.playerVM.toggleFullscreen();
+            this.resetHideTimer();
+          })
         }
         .width('100%')
+        .padding({ left: 12, right: 12, bottom: 10 })
+        .alignItems(VerticalAlign.Center)
         .position({ x: 0, y: '100%' })
         .translate({ y: '-100%' })
         // 空白区域透传给手势层；按钮与 Slider 自身仍可交互
@@ -494,6 +491,19 @@ export struct PlayerControlView {
     this.danmakuOn = !this.danmakuOn;
     this.playerVM.danmakuEnabled = this.danmakuOn;
     Pref.danmakuEnabled.put(this.danmakuOn);
+    this.resetHideTimer();
+  }
+
+  /** 打开弹幕设置弹窗：打开期间控制栏不自动隐藏（onDanmakuDialogClosed 恢复） */
+  private openDanmakuSettings(): void {
+    this.danmakuPanelVisible = true;
+    this.danmakuDialogController.open();
+    this.resetHideTimer();
+  }
+
+  /** 弹幕设置弹窗关闭（X 按钮 / 遮罩 / 返回键统一收敛到此处） */
+  private onDanmakuDialogClosed(): void {
+    this.danmakuPanelVisible = false;
     this.resetHideTimer();
   }
 
