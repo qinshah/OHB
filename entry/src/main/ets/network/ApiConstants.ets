@@ -109,4 +109,8 @@ export class ApiConstants {
 
   // ---- 音乐（P2 Task 20：音乐分区排行） ----
   static readonly RANKING_V2: string = `${AppConstants.API_BASE}/x/web-interface/ranking/v2`;
+
+  // ---- 弹幕 ----
+  /** 分段弹幕（protobuf 二进制，需 Cookie；type=1 视频，segment_index 从 1 开始） */
+  static readonly DM_SEG: string = `${AppConstants.API_BASE}/x/v2/dm/web/seg.so`;
 }

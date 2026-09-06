@@ -144,6 +144,52 @@ export class HttpClient {
     return this.request(url, http.RequestMethod.POST, params, channel, useAppUa);
   }
 
+  /**
+   * 二进制 GET：不做包络解析，返回原始 ArrayBuffer（用于 seg.so 等 protobuf 接口）。
+   * - 请求头与 getRawJson 一致（Web UA + Referer + Cookie）
+   * - 非 200 / 空响应 → Result.err（调用方静默降级，不影响播放主流程）
+   */
+  async getBinary(url: string, params: Record<string, string | number | boolean>,
+    referer: string = AppConstants.REFERER): Promise<Result<ArrayBuffer>> {
+    try {
+      const query = AppSigner.toQueryString(params);
+      const requestUrl = query.length > 0 ? `${url}?${query}` : url;
+      const header: Record<string, string> = {
+        'User-Agent': AppConstants.WEB_UA,
+        'Referer': referer,
+        'Cookie': CookieManager.getInstance().buildCookieHeader()
+      };
+      Logger.info('Http', `GET(binary) ${requestUrl}`);
+      const req = http.createHttp();
+      try {
+        const resp = await req.request(requestUrl, {
+          method: http.RequestMethod.GET,
+          header: header,
+          connectTimeout: AppConstants.CONNECT_TIMEOUT,
+          readTimeout: AppConstants.READ_TIMEOUT,
+          expectDataType: http.HttpDataType.ARRAY_BUFFER
+        });
+        const setCookie = resp.cookies;
+        if (typeof setCookie === 'string' && setCookie.length > 0) {
+          CookieManager.getInstance().absorbSetCookie(setCookie);
+        }
+        if (resp.responseCode !== 200) {
+          return Result.err<ArrayBuffer>(AppError.http(resp.responseCode));
+        }
+        const body = resp.result as ArrayBuffer;
+        if (body === undefined || body === null || body.byteLength === 0) {
+          return Result.err<ArrayBuffer>(AppError.parse('empty binary body'));
+        }
+        return Result.ok<ArrayBuffer>(body);
+      } finally {
+        req.destroy();
+      }
+    } catch (e) {
+      Logger.error('Http', `getBinary fail ${url}: ${JSON.stringify(e)}`);
+      return Result.err<ArrayBuffer>(AppError.network(JSON.stringify(e)));
+    }
+  }
+
   private async doRequest(url: string, method: http.RequestMethod, header: Record<string, string>,
     extraData: string | undefined): Promise<http.HttpResponse> {
     let attempt = 0;

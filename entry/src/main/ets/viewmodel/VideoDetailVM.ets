@@ -7,6 +7,7 @@ import { VideoRepository } from '../data/repository/VideoRepository';
 import { Player } from '../player/Player';
 import { PlayerRepository } from '../repository/PlayerRepository';
 import { Pref } from '../services/storage/Pref';
+import { DanmakuControllerManager } from '../services/danmaku/DanmakuController';
 
 /**
  * 视频详情 ViewModel（Task 9）：详情 + 播放地址加载，持有并驱动 PlayerController。
@@ -61,6 +62,8 @@ export class VideoDetailVM {
     PlayerRepository.remove(this.playerKey); // 释放占位/旧实例
     this.playerVM = target;
     this.playerKey = bvid;
+    // 弹幕开关跟随设置中心初始值（后续由控制栏按钮切换并持久化）
+    this.playerVM.danmakuEnabled = Pref.danmakuEnabled.get();
     // 经 AppStorage 发布 Player 引用：VideoPlayerNode 组件 onLoad 时跨模块解析并绑定 Surface。
     // 不用自定义 static Map 注册表——@Component 编译单元存在模块双实例问题（注册与查询
     // 读到不同副本）；AppStorage 是框架级全局单例，跨模块绝对共享。
@@ -234,6 +237,8 @@ export class VideoDetailVM {
       return;
     }
     this.playUrlInfo = r.value;
+    // 弹幕数据源跟随 cid（分P切换时 DanmakuLayer 检测到变化会重置渲染并拉取新数据）
+    this.playerVM.danmakuCid = cid;
     await this.playerVM.load(this.playUrlInfo.url, Player.defaultHeaders());
     // 应用默认倍速（设置中心，AP-4）
     const speed = Pref.defaultSpeed.get();
@@ -253,6 +258,10 @@ export class VideoDetailVM {
 
   async release(): Promise<void> {
     this.loadSeq++;
+    // 页面彻底关闭：释放弹幕分桶数据（详情页/全屏页共享，仅此处移除）
+    if (this.detail !== null && this.detail.cid > 0) {
+      DanmakuControllerManager.remove(this.detail.cid);
+    }
     // 清理 AppStorage 中发布的 Player 引用（防止泄漏与脏引用）
     AppStorage.delete(VideoDetailVM.playerKeyOf(this.playerKey));
     await PlayerRepository.remove(this.playerKey);

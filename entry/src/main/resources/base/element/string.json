@@ -11,6 +11,66 @@
     {
       "name": "app_name",
       "value": "OHB"
+    },
+    {
+      "name": "danmaku_settings_title",
+      "value": "Danmaku settings"
+    },
+    {
+      "name": "pref_danmaku_enabled_title",
+      "value": "Danmaku"
+    },
+    {
+      "name": "pref_danmaku_enabled_desc",
+      "value": "Show bullet comments over the video"
+    },
+    {
+      "name": "danmaku_opacity",
+      "value": "Opacity"
+    },
+    {
+      "name": "pref_danmaku_opacity_desc",
+      "value": "Opacity of danmaku text"
+    },
+    {
+      "name": "danmaku_font_scale",
+      "value": "Font size"
+    },
+    {
+      "name": "pref_danmaku_font_scale_desc",
+      "value": "Scale factor of danmaku font size"
+    },
+    {
+      "name": "danmaku_show_area",
+      "value": "Display area"
+    },
+    {
+      "name": "pref_danmaku_show_area_desc",
+      "value": "Ratio of player height covered by danmaku"
+    },
+    {
+      "name": "danmaku_duration",
+      "value": "Scroll speed"
+    },
+    {
+      "name": "pref_danmaku_duration_desc",
+      "value": "Seconds for a scrolling danmaku to cross the screen (smaller is faster)"
+    },
+    {
+      "name": "danmaku_weight",
+      "value": "Block level"
+    },
+    {
+      "name": "pref_danmaku_weight_desc",
+      "value": "Hide danmaku below this weight"
+    },
+    {
+      "name": "danmaku_merge",
+      "value": "Merge duplicates"
+    },
+    {
+      "name": "pref_danmaku_merge_desc",
+      "value": "Merge identical danmaku and show a counter"
     }
   ]
 }

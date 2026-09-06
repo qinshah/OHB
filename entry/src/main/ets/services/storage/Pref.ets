@@ -33,8 +33,9 @@ export interface EnumEntry<T> {
 interface PrefItemP<T extends preferences.ValueType> {
   key: string;
   def: T;
-  title: string;
-  desc: string;
+  /** 支持 $r 资源引用或字符串字面量（AGENTS.md：用户可见文案优先资源化） */
+  title: ResourceStr;
+  desc: ResourceStr;
   onChange: Callback<preferences.ValueType>;
   entries?: EnumEntry<T>[];
   needInit?: boolean;
@@ -51,8 +52,8 @@ const TODO = () => {
 export class PrefItem<T extends preferences.ValueType> {
   readonly key: string;
   readonly def: T;
-  readonly title: string;
-  readonly desc: string;
+  readonly title: ResourceStr;
+  readonly desc: ResourceStr;
   readonly entries: EnumEntry<T>[];
   readonly isEnum: boolean;
   readonly needInit: boolean;
@@ -84,7 +85,8 @@ export class PrefItem<T extends preferences.ValueType> {
   }
 
   put(value: T): void {
-    getP().putSync(this.key, this.def)
+    // 修复：此前误写 this.def（写入默认值），导致所有设置无法持久化
+    getP().putSync(this.key, value)
     getP().flushSync();
     this.onChange(value);
   }
@@ -176,6 +178,65 @@ export class Pref {
     title: '深色模式',
     desc: '外观主题（跟随系统/浅色/深色）'
   });
+  // ---------- 弹幕（对齐 PiliPlus 默认值） ----------
+
+  /** 弹幕：显示开关 */
+  static readonly danmakuEnabled: PrefItem<boolean> = new PrefItem<boolean>({
+    key: 'danmakuEnabled',
+    def: true,
+    onChange: TODO,
+    title: $r('app.string.pref_danmaku_enabled_title') as ResourceStr,
+    desc: $r('app.string.pref_danmaku_enabled_desc') as ResourceStr
+  });
+  /** 弹幕：不透明度（0.1–1.0） */
+  static readonly danmakuOpacity: PrefItem<number> = new PrefItem<number>({
+    key: 'danmakuOpacity',
+    def: 1.0,
+    onChange: TODO,
+    title: $r('app.string.danmaku_opacity') as ResourceStr,
+    desc: $r('app.string.pref_danmaku_opacity_desc') as ResourceStr
+  });
+  /** 弹幕：字号缩放（0.5–2.0） */
+  static readonly danmakuFontScale: PrefItem<number> = new PrefItem<number>({
+    key: 'danmakuFontScale',
+    def: 1.0,
+    onChange: TODO,
+    title: $r('app.string.danmaku_font_scale') as ResourceStr,
+    desc: $r('app.string.pref_danmaku_font_scale_desc') as ResourceStr
+  });
+  /** 弹幕：显示区域（0.25–1.0，占播放区高度比例） */
+  static readonly danmakuShowArea: PrefItem<number> = new PrefItem<number>({
+    key: 'danmakuShowArea',
+    def: 0.5,
+    onChange: TODO,
+    title: $r('app.string.danmaku_show_area') as ResourceStr,
+    desc: $r('app.string.pref_danmaku_show_area_desc') as ResourceStr
+  });
+  /** 弹幕：滚动时长秒（3–15，越小越快） */
+  static readonly danmakuDuration: PrefItem<number> = new PrefItem<number>({
+    key: 'danmakuDuration',
+    def: 7.0,
+    onChange: TODO,
+    title: $r('app.string.danmaku_duration') as ResourceStr,
+    desc: $r('app.string.pref_danmaku_duration_desc') as ResourceStr
+  });
+  /** 弹幕：屏蔽等级（0–10，越大屏蔽越多） */
+  static readonly danmakuWeight: PrefItem<number> = new PrefItem<number>({
+    key: 'danmakuWeight',
+    def: 0,
+    onChange: TODO,
+    title: $r('app.string.danmaku_weight') as ResourceStr,
+    desc: $r('app.string.pref_danmaku_weight_desc') as ResourceStr
+  });
+  /** 弹幕：合并重复弹幕（渲染 ×N） */
+  static readonly danmakuMerge: PrefItem<boolean> = new PrefItem<boolean>({
+    key: 'danmakuMerge',
+    def: false,
+    onChange: TODO,
+    title: $r('app.string.danmaku_merge') as ResourceStr,
+    desc: $r('app.string.pref_danmaku_merge_desc') as ResourceStr
+  });
+
   // /** 隐私：屏蔽关键词（逗号分隔） */
   // static readonly filterKeywords: PrefItem<string> = new PrefItem<string>({
   //   key: 'filterKeywords',

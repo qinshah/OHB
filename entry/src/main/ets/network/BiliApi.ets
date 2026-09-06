@@ -78,8 +78,22 @@ export class BiliApi {
     }, ChannelType.Raw);
   }
 
-  // ---------- 视频互动（P2 Task 13） ----------
+  // ---------- 弹幕 ----------
 
+  /**
+   * 分段弹幕（protobuf 二进制，DmSegMobileReply）
+   * @param cid          视频 cid（oid）
+   * @param segmentIndex 段号，从 1 开始（每段 6 分钟）
+   */
+  dmSeg(cid: number, segmentIndex: number): Promise<Result<ArrayBuffer>> {
+    return this.http.getBinary(ApiConstants.DM_SEG, {
+      'type': 1,
+      'oid': cid,
+      'segment_index': segmentIndex
+    });
+  }
+
+  // ---------- 视频互动（P2 Task 13） ----------
   /** 相关视频 */
   relatedVideos(bvid: string): Promise<Result<Object>> {
     return this.http.get(ApiConstants.ARCHIVE_RELATED, { 'bvid': bvid }, ChannelType.Raw);

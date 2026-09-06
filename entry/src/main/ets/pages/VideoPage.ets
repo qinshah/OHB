@@ -6,6 +6,7 @@ import { VideoDetailVM } from '../viewmodel/VideoDetailVM';
 import { ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
 import { PlayerControlView } from '../components/PlayerControlView';
+import { DanmakuLayer } from '../components/DanmakuLayer';
 import { CommentSection } from '../components/CommentSection';
 import { CommentViewModel } from '../viewmodel/CommentViewModel';
 import { VideoCard } from '../models/VideoCard';
@@ -97,6 +98,11 @@ export default struct VideoDetailPage {
               .width('100%')
               .height('100%')
           }, (seq: number) => `nc_${seq}`)
+
+          // 弹幕层（视频画面之上、手势/控制层之下；进入全屏时本层暂停，全屏页另有一层）
+          DanmakuLayer({ playerId: this.bvid, pauseWhenFullscreen: true })
+            .width('100%')
+            .height('100%')
 
           // 控制层
           PlayerControlView({ playerId: this.bvid })

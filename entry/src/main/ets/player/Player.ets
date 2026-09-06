@@ -50,6 +50,10 @@ export class Player {
   brightness: number = -1;
   /** 倍速 */
   speed: number = 1.0;
+  /** 弹幕数据源 cid（分P切换时由 VideoDetailVM 更新，DanmakuLayer 轮询检测变化后重置渲染） */
+  danmakuCid: number = 0;
+  /** 弹幕显示开关（控制栏按钮切换，DanmakuLayer 轮询读取；持久化到 Pref.danmakuEnabled） */
+  danmakuEnabled: boolean = true;
   /** 是否处于全屏页 */
   private _fullscreen: boolean = false;
 

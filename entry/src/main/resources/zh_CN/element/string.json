@@ -11,6 +11,66 @@
     {
       "name": "module_desc",
       "value": "模块描述"
+    },
+    {
+      "name": "danmaku_settings_title",
+      "value": "弹幕设置"
+    },
+    {
+      "name": "pref_danmaku_enabled_title",
+      "value": "弹幕开关"
+    },
+    {
+      "name": "pref_danmaku_enabled_desc",
+      "value": "是否在视频画面上显示弹幕"
+    },
+    {
+      "name": "danmaku_opacity",
+      "value": "不透明度"
+    },
+    {
+      "name": "pref_danmaku_opacity_desc",
+      "value": "弹幕文字的不透明度"
+    },
+    {
+      "name": "danmaku_font_scale",
+      "value": "弹幕字号"
+    },
+    {
+      "name": "pref_danmaku_font_scale_desc",
+      "value": "弹幕字体缩放倍数"
+    },
+    {
+      "name": "danmaku_show_area",
+      "value": "显示区域"
+    },
+    {
+      "name": "pref_danmaku_show_area_desc",
+      "value": "弹幕显示区域占播放器高度的比例"
+    },
+    {
+      "name": "danmaku_duration",
+      "value": "滚动速度"
+    },
+    {
+      "name": "pref_danmaku_duration_desc",
+      "value": "滚动弹幕划过屏幕的秒数，越小越快"
+    },
+    {
+      "name": "danmaku_weight",
+      "value": "屏蔽等级"
+    },
+    {
+      "name": "pref_danmaku_weight_desc",
+      "value": "隐藏低于该权重的弹幕"
+    },
+    {
+      "name": "danmaku_merge",
+      "value": "合并重复弹幕"
+    },
+    {
+      "name": "pref_danmaku_merge_desc",
+      "value": "相同内容的弹幕合并并显示数量"
     }
   ]
 }

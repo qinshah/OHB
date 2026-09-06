@@ -4,6 +4,7 @@ import { PlayerRepository } from '../repository/PlayerRepository';
 import { DisplayHelper } from '../common/utils/DisplayHelper';
 import { Route } from '../framework/Route';
 import { PlayerControlView } from '../components/PlayerControlView';
+import { DanmakuLayer } from '../components/DanmakuLayer';
 import { VideoNodeController } from '../player/VideoNodeController';
 import { display } from '@kit.ArkUI';
 import { Logger } from '../common/utils/Logger';
@@ -105,6 +106,11 @@ export struct VideoFullscreenPage {
             .width('100%')
             .height('100%')
         }
+
+        // 弹幕层（视频画面之上、手势/控制层之下；与详情页共享 Player 与弹幕数据）
+        DanmakuLayer({ playerId: this.playerId })
+          .width('100%')
+          .height('100%')
 
         // 控制层（含全屏按钮 → 退出全屏页）
         PlayerControlView({ playerId: this.playerId })
