@@ -68,7 +68,8 @@ export struct MinePage {
         .fontSize(12)
         .fontColor(AppColors.TEXT_PRIMARY)
     }
-    .width('100%')
+    // layoutWeight(1)：Row 内三等分（width('100%') 会撑满整行把后两项挤出屏幕）
+    .layoutWeight(1)
     .padding({ top: 16, bottom: 16 })
     .backgroundColor(AppColors.CARD_BG)
     .borderRadius(12)

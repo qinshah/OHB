@@ -171,6 +171,7 @@ export struct HomePage {
   build() {
     NavDestination() {
       Column() {
+        Blank().height(5)
         // 搜索排：下滑收起（高度/透明度动画），上滑恢复
         Row() {
           Search({
