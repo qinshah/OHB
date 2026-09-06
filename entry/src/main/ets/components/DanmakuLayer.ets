@@ -186,9 +186,18 @@ export struct DanmakuLayer {
       .setMaximumLines(maxLines)
       .preventOverlapping(overlapping)
       .setDanmakuMargin(4);
+    // 关键时序：onAreaChange 晚于 DanmakuView 的 aboutToAppear（此时 model.delegate 非
+    // null），setCallback 才能真正生效；且必须在 prepare() 之前调用——DanmakuView.prepare
+    // 内部仅当 mCallback 非 null 时才会把它传给 DrawHandler，DrawHandler 完成 PREPARE 后
+    // 回调 prepared()。顺序颠倒会静默失败（不报错、弹幕不显示）。
+    this.model.setCallback(new DanmakuLayerCallback((): void => {
+      this.prepared = true;
+      this.model.start();
+      hilog.info(0x0000, TAG, 'prepared playerId=%{public}s', this.playerId);
+    }));
     const parser: BaseDanmakuParser = new EmptyDanmakuParser();
     this.model.prepare(parser, this.ctx);
-    hilog.info(0x0000, TAG, 'prepare playerId=%{public}s area=%{public}f', this.playerId, this.areaRatio);
+    hilog.info(0x0000, TAG, 'prepare playerId=%{public}s area=%{public}s', this.playerId, `${this.areaRatio}`);
   }
 
   private startTick(): void {

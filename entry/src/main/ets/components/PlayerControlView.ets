@@ -7,6 +7,7 @@ import { FormatUtils } from '../common/utils/FormatUtils';
 import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
 import { Pref } from '../services/storage/Pref';
 import { DanmakuSettingsPanel } from './DanmakuSettingsPanel';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 /** 手势类型：垂直=左亮度/右音量，水平=进度拖拽 */
 enum PlayerGestureType {
