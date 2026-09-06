@@ -18,6 +18,11 @@ export class BiliApi {
     return this.http.get(ApiConstants.NAV, {}, ChannelType.Raw);
   }
 
+  /** 用户关系统计（关注数/粉丝数） */
+  relationStat(mid: string): Promise<Result<Object>> {
+    return this.http.get(ApiConstants.USER_RELATION_STAT, { 'vmid': mid }, ChannelType.Raw);
+  }
+
   // ---------- 推荐 / 热门 ----------
 
   /** Web 端推荐视频流（WBI 签名） */

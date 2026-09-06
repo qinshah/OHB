@@ -47,4 +47,8 @@ export class AccountProfile {
   uname: string = '';
   face: string = '';
   level: number = 0;
+  /** B币余额（nav 接口 money 字段） */
+  money: number = 0;
+  /** 硬币数（nav 接口 coin 字段） */
+  coin: number = 0;
 }

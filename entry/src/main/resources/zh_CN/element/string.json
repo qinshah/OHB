@@ -75,6 +75,114 @@
     {
       "name": "quality_picker_title",
       "value": "画质选择"
+    },
+    {
+      "name": "home_search_hint",
+      "value": "搜索视频、UP主、番剧"
+    },
+    {
+      "name": "home_tab_live",
+      "value": "直播"
+    },
+    {
+      "name": "home_tab_recommend",
+      "value": "推荐"
+    },
+    {
+      "name": "home_tab_popular",
+      "value": "热门"
+    },
+    {
+      "name": "home_tab_bangumi",
+      "value": "番剧"
+    },
+    {
+      "name": "home_tab_music",
+      "value": "音乐"
+    },
+    {
+      "name": "mine_dark_mode",
+      "value": "切换深色模式"
+    },
+    {
+      "name": "mine_scan_login",
+      "value": "扫码登录"
+    },
+    {
+      "name": "mine_not_logged_in",
+      "value": "未登录"
+    },
+    {
+      "name": "mine_login_hint",
+      "value": "登录后可同步关注、收藏、动态"
+    },
+    {
+      "name": "mine_space",
+      "value": "空间"
+    },
+    {
+      "name": "mine_bcoin",
+      "value": "B币"
+    },
+    {
+      "name": "mine_coin",
+      "value": "硬币"
+    },
+    {
+      "name": "mine_stat_dynamic",
+      "value": "动态"
+    },
+    {
+      "name": "mine_stat_following",
+      "value": "关注"
+    },
+    {
+      "name": "mine_stat_follower",
+      "value": "粉丝"
+    },
+    {
+      "name": "mine_section_accounts",
+      "value": "账号管理"
+    },
+    {
+      "name": "mine_switch_hint",
+      "value": "点击切换"
+    },
+    {
+      "name": "mine_current_account",
+      "value": "当前账户"
+    },
+    {
+      "name": "mine_logout",
+      "value": "退出"
+    },
+    {
+      "name": "mine_add_account",
+      "value": "添加账户"
+    },
+    {
+      "name": "mine_entry_history",
+      "value": "历史记录"
+    },
+    {
+      "name": "mine_entry_favorites",
+      "value": "我的收藏"
+    },
+    {
+      "name": "mine_entry_watch_later",
+      "value": "稍后再看"
+    },
+    {
+      "name": "mine_check_update",
+      "value": "检查更新"
+    },
+    {
+      "name": "mine_settings",
+      "value": "设置"
+    },
+    {
+      "name": "home_no_recommend",
+      "value": "没有推荐内容"
     }
   ]
 }

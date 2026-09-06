@@ -38,6 +38,19 @@ interface RawNavData {
   face?: string;
   level?: number;
   money?: number;
+  coin?: number;
+}
+
+/** x/relation/stat 原始数据 */
+interface RawRelationStat {
+  following?: number;
+  follower?: number;
+}
+
+/** 用户关系统计（关注/粉丝数） */
+export class RelationStat {
+  following: number = 0;
+  follower: number = 0;
 }
 
 /** B站轮询返回码 */
@@ -161,7 +174,22 @@ export class AuthRepository {
     profile.uname = data.uname ?? '';
     profile.face = data.face ?? '';
     profile.level = data.level ?? 0;
+    profile.money = data.money ?? 0;
+    profile.coin = data.coin ?? 0;
     return Result.ok<AccountProfile>(profile);
+  }
+
+  /** 用户关系统计（关注数/粉丝数） */
+  async fetchRelationStat(mid: string): Promise<Result<RelationStat>> {
+    const r = await this.api.relationStat(mid);
+    if (!r.isOk) {
+      return Result.err<RelationStat>(r.error);
+    }
+    const data = r.value as RawRelationStat;
+    const stat = new RelationStat();
+    stat.following = data.following ?? 0;
+    stat.follower = data.follower ?? 0;
+    return Result.ok<RelationStat>(stat);
   }
 
   /** 完成登录：写凭证 + 拉取并保存用户档案 */

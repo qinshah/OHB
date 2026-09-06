@@ -75,6 +75,114 @@
     {
       "name": "quality_picker_title",
       "value": "Video quality"
+    },
+    {
+      "name": "home_search_hint",
+      "value": "Search videos, creators, anime"
+    },
+    {
+      "name": "home_tab_live",
+      "value": "Live"
+    },
+    {
+      "name": "home_tab_recommend",
+      "value": "For you"
+    },
+    {
+      "name": "home_tab_popular",
+      "value": "Hot"
+    },
+    {
+      "name": "home_tab_bangumi",
+      "value": "Anime"
+    },
+    {
+      "name": "home_tab_music",
+      "value": "Music"
+    },
+    {
+      "name": "mine_dark_mode",
+      "value": "Toggle dark mode"
+    },
+    {
+      "name": "mine_scan_login",
+      "value": "Scan to log in"
+    },
+    {
+      "name": "mine_not_logged_in",
+      "value": "Not logged in"
+    },
+    {
+      "name": "mine_login_hint",
+      "value": "Log in to sync follows, favorites and dynamics"
+    },
+    {
+      "name": "mine_space",
+      "value": "My space"
+    },
+    {
+      "name": "mine_bcoin",
+      "value": "B coins"
+    },
+    {
+      "name": "mine_coin",
+      "value": "Coins"
+    },
+    {
+      "name": "mine_stat_dynamic",
+      "value": "Dynamics"
+    },
+    {
+      "name": "mine_stat_following",
+      "value": "Following"
+    },
+    {
+      "name": "mine_stat_follower",
+      "value": "Followers"
+    },
+    {
+      "name": "mine_section_accounts",
+      "value": "Accounts"
+    },
+    {
+      "name": "mine_switch_hint",
+      "value": "Tap to switch"
+    },
+    {
+      "name": "mine_current_account",
+      "value": "Current"
+    },
+    {
+      "name": "mine_logout",
+      "value": "Log out"
+    },
+    {
+      "name": "mine_add_account",
+      "value": "Add account"
+    },
+    {
+      "name": "mine_entry_history",
+      "value": "History"
+    },
+    {
+      "name": "mine_entry_favorites",
+      "value": "Favorites"
+    },
+    {
+      "name": "mine_entry_watch_later",
+      "value": "Watch later"
+    },
+    {
+      "name": "mine_check_update",
+      "value": "Check for updates"
+    },
+    {
+      "name": "mine_settings",
+      "value": "Settings"
+    },
+    {
+      "name": "home_no_recommend",
+      "value": "No recommendations"
     }
   ]
 }
