@@ -11,6 +11,7 @@ import { MediaSessionHelper } from '../services/media/MediaSessionHelper';
 import { avSession } from '@kit.AVSessionKit';
 import { Route } from '../framework/Route';
 import { VideoNodeController } from './VideoNodeController';
+import { QualityOption } from '../models/PlayUrlInfo';
 import hilog from '@ohos.hilog';
 
 /**
@@ -54,6 +55,12 @@ export class Player {
   danmakuCid: number = 0;
   /** 弹幕显示开关（控制栏按钮切换，DanmakuLayer 轮询读取；持久化到 Pref.danmakuEnabled） */
   danmakuEnabled: boolean = true;
+  /** 可用画质列表（由 VideoDetailVM 在 loadPlayUrl 后写入，控制栏画质按钮数据源） */
+  qualityOptions: QualityOption[] = [];
+  /** 当前画质 qn（实际返回值而非请求值，未登录请求高画质会被降级） */
+  currentQuality: number = 0;
+  /** 画质切换中（VM 置位，控制栏可显示加载态/防重复触发） */
+  qualityChanging: boolean = false;
   /** 是否处于全屏页 */
   private _fullscreen: boolean = false;
 
@@ -80,6 +87,8 @@ export class Player {
   private volumeListenerCb: (() => void) | null = null;
   /** 重建播放器后需要恢复到的进度（ms），prepared 时消费 */
   private pendingSeekMs: number = 0;
+  /** 画质切换请求回调（由 VideoDetailVM 注册执行重拉流+续播；UI 经 requestQualityChange 触发） */
+  private qualityChangeCb: ((qn: number) => void) | null = null;
 
   constructor(id: string = '') {
     this.id = id;
@@ -172,6 +181,18 @@ export class Player {
     this.sysVolumeChangeCb = cb;
   }
 
+  /** VM 注册画质切换处理回调（VM 内执行重拉流+续播；release 时置 null） */
+  setQualityChangeListener(cb: ((qn: number) => void) | null): void {
+    this.qualityChangeCb = cb;
+  }
+
+  /** UI 请求切换画质（转发给 VM 注册的处理回调；无人注册时静默忽略） */
+  requestQualityChange(qn: number): void {
+    if (this.qualityChangeCb !== null) {
+      this.qualityChangeCb(qn);
+    }
+  }
+
   private bindEngine(engine: IPlayerEngine): void {
     engine.onStateChange((s: PlaybackState) => {
       this.state = s;
@@ -224,12 +245,16 @@ export class Player {
     this.engine.setSurface(surfaceId);
   }
 
-  /** 加载并播放 */
-  async load(url: string, headers: Record<string, string>): Promise<void> {
+  /**
+   * 加载并播放。
+   * @param startAtMs 起播位置（画质切换/续播时传入：prepared 后自动 seek 到该进度再播，
+   *                  复用 pendingSeekMs 机制；0 表示从头播放）
+   */
+  async load(url: string, headers: Record<string, string>, startAtMs: number = 0): Promise<void> {
     this.errorMessage = '';
     this.isCompleted = false;
-    this.pendingSeekMs = 0;
-    this.positionMs = 0;
+    this.pendingSeekMs = Math.max(0, startAtMs);
+    this.positionMs = Math.max(0, startAtMs);
     this.aspectRatio = 0;
     this.videoWidth = 0;
     this.videoHeight = 0;
@@ -353,6 +378,8 @@ export class Player {
       SystemAudioHelper.removeVolumeListener(this.volumeListenerCb);
       this.volumeListenerCb = null;
     }
+    // 清理画质切换回调（防 VM 已销毁仍被 UI 触发）
+    this.qualityChangeCb = null;
     await this.engine.release();
     this.state = PlaybackState.Released;
   }

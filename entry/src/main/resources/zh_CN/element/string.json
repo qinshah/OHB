@@ -71,6 +71,10 @@
     {
       "name": "pref_danmaku_merge_desc",
       "value": "相同内容的弹幕合并并显示数量"
+    },
+    {
+      "name": "quality_picker_title",
+      "value": "画质选择"
     }
   ]
 }

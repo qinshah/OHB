@@ -42,6 +42,8 @@ export class VideoDetailVM {
   private static vmSeq: number = 0;
   /** 防竞态序号 */
   private loadSeq: number = 0;
+  /** 画质切换进行中（防重入） */
+  private qualityChanging: boolean = false;
 
   constructor() {
     // 构造时先以占位 id 登记，页面 aboutToAppear 经 attachPlayer(bvid) 换为真实实例
@@ -64,6 +66,11 @@ export class VideoDetailVM {
     this.playerKey = bvid;
     // 弹幕开关跟随设置中心初始值（后续由控制栏按钮切换并持久化）
     this.playerVM.danmakuEnabled = Pref.danmakuEnabled.get();
+    // 注册画质切换处理：控制栏 Select → Player.requestQualityChange → 此处 changeQuality
+    // （注意：attachPlayer 首次绑定后才注册；后续同一 bvid 复用 Player，无需重复注册）
+    this.playerVM.setQualityChangeListener((qn: number) => {
+      this.changeQuality(qn);
+    });
     // 经 AppStorage 发布 Player 引用：VideoPlayerNode 组件 onLoad 时跨模块解析并绑定 Surface。
     // 不用自定义 static Map 注册表——@Component 编译单元存在模块双实例问题（注册与查询
     // 读到不同副本）；AppStorage 是框架级全局单例，跨模块绝对共享。
@@ -237,6 +244,9 @@ export class VideoDetailVM {
       return;
     }
     this.playUrlInfo = r.value;
+    // 画质列表/当前画质同步给 Player（控制栏画质按钮数据源）
+    this.playerVM.qualityOptions = this.playUrlInfo.qualityOptions;
+    this.playerVM.currentQuality = this.playUrlInfo.quality;
     // 弹幕数据源跟随 cid（分P切换时 DanmakuLayer 检测到变化会重置渲染并拉取新数据）
     this.playerVM.danmakuCid = cid;
     await this.playerVM.load(this.playUrlInfo.url, Player.defaultHeaders());
@@ -244,6 +254,45 @@ export class VideoDetailVM {
     const speed = Pref.defaultSpeed.get();
     if (speed !== 1) {
       await this.playerVM.setSpeed(speed);
+    }
+  }
+
+  /**
+   * 切换画质（参考 PiliPlus updatePlayer 逻辑，适配 durl 模式）：
+   * - durl 单流模式下不同 qn 对应不同 URL，需带新 qn 重新请求 playurl
+   *   （PiliPlus 是 DASH 多流缓存切换，无需重新请求）
+   * - 记住当前播放进度 → 重拉流 load(startAtMs) → prepared 后自动 seek 回进度续播
+   * - 实际画质以接口返回值为准（未登录/非大会员请求高画质会被静默降级）
+   * - 持久化到 Pref.defaultQuality，下次打开视频生效
+   */
+  async changeQuality(qn: number): Promise<void> {
+    if (this.detail === null || this.qualityChanging || qn === this.playerVM.currentQuality) {
+      return;
+    }
+    this.qualityChanging = true;
+    this.playerVM.qualityChanging = true;
+    // 记住当前进度（换流后 seek 回去，对齐 PiliPlus 的 playedTime 续播）
+    const resumeMs: number = this.playerVM.positionMs;
+    try {
+      const r = await this.repo.getPlayUrl(this.detail.bvid, this.detail.cid, qn);
+      if (!r.isOk) {
+        this.playError = r.error.message;
+        return;
+      }
+      this.playUrlInfo = r.value;
+      this.playerVM.qualityOptions = this.playUrlInfo.qualityOptions;
+      this.playerVM.currentQuality = this.playUrlInfo.quality;
+      // 起播位置 = 切换前进度（prepared 后自动 seek）
+      await this.playerVM.load(this.playUrlInfo.url, Player.defaultHeaders(), resumeMs);
+      // 倍速重放（换流后内核倍速重置为 1.0）
+      if (this.playerVM.speed !== 1) {
+        await this.playerVM.setSpeed(this.playerVM.speed);
+      }
+      // 持久化画质偏好（下次打开视频/新视频生效）
+      Pref.defaultQuality.put(qn);
+    } finally {
+      this.playerVM.qualityChanging = false;
+      this.qualityChanging = false;
     }
   }
 

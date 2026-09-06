@@ -7,6 +7,7 @@ import { FormatUtils } from '../common/utils/FormatUtils';
 import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
 import { Pref } from '../services/storage/Pref';
 import { DanmakuSettingsDialog } from './DanmakuSettingsPanel';
+import { QualityOption } from '../models/PlayUrlInfo';
 
 /** 手势类型：垂直=左亮度/右音量，水平=进度拖拽 */
 enum PlayerGestureType {
@@ -57,6 +58,10 @@ export struct PlayerControlView {
   @State private danmakuOn: boolean = true;
   /** 弹幕设置弹窗打开中（打开期间控制栏不自动隐藏） */
   @State private danmakuPanelVisible: boolean = false;
+  /** 当前画质 qn 镜像（syncUi 同步自 playerVM.currentQuality，驱动画质按钮文案） */
+  @State private currentQuality: number = 0;
+  /** 可用画质列表镜像（syncUi 同步自 playerVM.qualityOptions） */
+  @State private qualityOptions: QualityOption[] = [];
   /** 弹幕设置弹窗控制器：默认样式（默认 autoCancel，点遮罩/返回键关闭走 cancel 回调） */
   private danmakuDialogController: CustomDialogController = new CustomDialogController({
     builder: DanmakuSettingsDialog({
@@ -311,6 +316,28 @@ export struct PlayerControlView {
             this.openDanmakuSettings();
           })
 
+          // 画质选择：原生 Select 下拉，选项显示画质名称（如 1080P 高清），按钮显示短文案
+          Select(this.qualitySelectOptions())
+            .selected(this.qualitySelectedIndex())
+            .value(this.qualityShortLabel())
+            .font({ size: 10 })
+            .fontColor(Color.White)
+            .selectedOptionBgColor($r('app.color.brand'))
+            .selectedOptionFontColor(Color.White)
+            .optionBgColor('#CC000000')
+            .optionFontColor(Color.White)
+            .constraintSize({ minWidth: 40, maxWidth: 100 })
+            .height(24)
+            .onSelect((index: number) => {
+              if (index >= 0 && index < this.qualityOptions.length) {
+                const qn = this.qualityOptions[index].qn;
+                if (qn !== this.currentQuality) {
+                  this.playerVM.requestQualityChange(qn);
+                }
+                this.resetHideTimer();
+              }
+            })
+
           // 全屏按钮
           Stack() {
             SymbolGlyph(this.playerVM.fullscreen
@@ -361,6 +388,8 @@ export struct PlayerControlView {
     this.durMs = this.playerVM.durationMs;
     this.playing = this.playerVM.state === PlaybackState.Playing;
     this.danmakuOn = this.playerVM.danmakuEnabled;
+    this.currentQuality = this.playerVM.currentQuality;
+    this.qualityOptions = this.playerVM.qualityOptions;
     this.vol = this.playerVM.systemVolume;
     const b = this.playerVM.brightness;
     if (b >= 0) {
@@ -505,6 +534,37 @@ export struct PlayerControlView {
   private onDanmakuDialogClosed(): void {
     this.danmakuPanelVisible = false;
     this.resetHideTimer();
+  }
+
+  /** 画质按钮短文案：当前 qn 对应的 shortDesc（如 1080P），未知时显示 qn 数字 */
+  private qualityShortLabel(): string {
+    if (this.currentQuality <= 0) {
+      return '';
+    }
+    for (const o of this.qualityOptions) {
+      if (o.qn === this.currentQuality) {
+        return o.shortDesc.length > 0 ? o.shortDesc : o.desc;
+      }
+    }
+    return `${this.currentQuality}`;
+  }
+
+  /** 构建 Select 选项列表（显示画质完整名称，如「1080P 高清」） */
+  private qualitySelectOptions(): SelectOption[] {
+    return this.qualityOptions.map((o: QualityOption): SelectOption => {
+      const opt: SelectOption = { value: o.desc };
+      return opt;
+    });
+  }
+
+  /** 当前画质在列表中的索引（找不到返回 0） */
+  private qualitySelectedIndex(): number {
+    for (let i = 0; i < this.qualityOptions.length; i++) {
+      if (this.qualityOptions[i].qn === this.currentQuality) {
+        return i;
+      }
+    }
+    return 0;
   }
 
   /**

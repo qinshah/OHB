@@ -3,7 +3,8 @@ import { AppError } from '../../common/result/AppError';
 import { BiliApi } from '../../network/BiliApi';
 import { VideoCard } from '../../models/VideoCard';
 import { VideoDetail, VideoPage } from '../../models/VideoDetail';
-import { PlayUrlInfo } from '../../models/PlayUrlInfo';
+import { PlayUrlInfo, QualityOption } from '../../models/PlayUrlInfo';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { PrefsStorage } from '../../services/storage/PrefsStorage';
 import { AccountManager } from '../../services/account/AccountManager';
 import { CookieManager } from '../../network/CookieManager';
@@ -78,10 +79,22 @@ interface RawDurl {
   backup_url?: string[];
 }
 
+/** support_formats 单项（playurl 响应，画质描述） */
+interface RawSupportFormat {
+  quality?: number;
+  new_desc?: string;
+  display_desc?: string;
+  superscript?: string;
+}
+
 interface RawPlayData {
   quality?: number;
   timelength?: number;
   durl?: RawDurl[];
+  /** 可用画质 qn 列表（账号可见范围内，从高到低） */
+  accept_quality?: number[];
+  /** 画质描述（与 accept_quality 对应） */
+  support_formats?: RawSupportFormat[];
 }
 
 /** 推荐/热门/搜索共用解析 */
@@ -246,7 +259,70 @@ export class VideoRepository {
     info.quality = d.quality ?? 0;
     info.qualityDesc = VideoRepository.qualityName(info.quality);
     info.timelength = d.timelength ?? 0;
+    info.qualityOptions = VideoRepository.parseQualityOptions(d);
+    // 未登录时 fnval=1 接口只返回 2 档画质（accept_quality=[64,16]），
+    // 借 DASH 请求（try_look 只对 DASH 生效）补全画质列表（含 1080P 试看）
+    if (info.qualityOptions.length <= 2) {
+      const f = await this.api.playUrlFormats(bvid, cid);
+      if (f.isOk) {
+        const fd = f.value as RawPlayData;
+        const dashOptions = VideoRepository.parseQualityOptions(fd);
+        if (dashOptions.length > info.qualityOptions.length) {
+          hilog.info(0x0000, TAG,
+            'quality list from dash: %{public}d items (durl only %{public}d)',
+            dashOptions.length, info.qualityOptions.length);
+          info.qualityOptions = dashOptions;
+        }
+      }
+    }
+    hilog.info(0x0000, TAG, 'getPlayUrl qn=%{public}d real=%{public}d options=%{public}s',
+      qn, info.quality, `${info.qualityOptions.map((o: QualityOption) => `${o.qn}:${o.desc}`)}`);
     return Result.ok<PlayUrlInfo>(info);
+  }
+
+  /**
+   * 组装可用画质列表（参考 PiliPlus VideoQuality 使用方式）：
+   * - 以 accept_quality（账号可见范围内的 qn 列表）为准，从 support_formats 取
+   *   new_desc（列表项完整描述）/ display_desc（按钮短文案）/ superscript（大会员角标）
+   * - 描述兜底链：new_desc → display_desc → qualityName 本地映射
+   *   （实测未登录时 support_formats 的 new_desc 为空串、display_desc 才有值如「720P」）
+   */
+  private static parseQualityOptions(d: RawPlayData): QualityOption[] {
+    const qns: number[] = d.accept_quality ?? [];
+    if (qns.length === 0) {
+      return [];
+    }
+    const formats: RawSupportFormat[] = d.support_formats ?? [];
+    const list: QualityOption[] = [];
+    for (const q of qns) {
+      const o = new QualityOption();
+      o.qn = q;
+      let matched: RawSupportFormat | null = null;
+      for (const f of formats) {
+        if (f.quality === q) {
+          matched = f;
+          break;
+        }
+      }
+      if (matched !== null) {
+        o.desc = matched.new_desc ?? '';
+        o.shortDesc = matched.display_desc ?? '';
+        o.superscript = matched.superscript ?? '';
+      } else {
+        // 兜底：qn 映射本地文案
+        o.desc = VideoRepository.qualityName(q);
+        o.shortDesc = o.desc;
+      }
+      // desc 兜底链：new_desc 空 → display_desc → qualityName
+      if (o.desc.length === 0) {
+        o.desc = o.shortDesc.length > 0 ? o.shortDesc : VideoRepository.qualityName(q);
+      }
+      if (o.shortDesc.length === 0) {
+        o.shortDesc = VideoRepository.qualityName(q);
+      }
+      list.push(o);
+    }
+    return list;
   }
 
   // ---------- P2 Task 13：视频详情互动 ----------
@@ -337,3 +413,6 @@ export class VideoRepository {
     }
   }
 }
+
+// 日志 TAG（规范：统一定义在文件最下方）
+const TAG = VideoRepository.name ?? 'VideoRepository';

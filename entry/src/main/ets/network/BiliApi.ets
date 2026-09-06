@@ -51,6 +51,7 @@ export class BiliApi {
    * 播放地址（WBI 签名）
    * V1 采用 fnval=1（muxed MP4 durl），保证 AVPlayer 可靠起播；
    * DASH 多清晰度在 P1（Task 12）完善。
+   * try_look=1：参考 PiliPlus，未登录也能查看高画质（否则 accept_quality 只有 64/16）
    */
   playUrl(bvid: string, cid: number, qn: number = 80): Promise<Result<Object>> {
     return this.http.get(ApiConstants.PLAY_URL, {
@@ -62,6 +63,27 @@ export class BiliApi {
       'fourk': 1,
       'platform': 'pc',
       'voice_balance': 1,
+      'try_look': 1,
+      'web_location': 1315873
+    }, ChannelType.Web);
+  }
+
+  /**
+   * 画质列表探测（WBI 签名）：fnval=16 DASH 模式 + try_look。
+   * 仅用于获取完整 accept_quality/support_formats（try_look 只对 DASH 请求生效，
+   * 参考 PiliPlus tryLook 条件：未登录时借 DASH 接口拿到含 1080P 的试看列表）；
+   * 返回的 dash 流本项目 AVPlayer 不消费，播放地址仍走 fnval=1 的 playUrl。
+   */
+  playUrlFormats(bvid: string, cid: number): Promise<Result<Object>> {
+    return this.http.get(ApiConstants.PLAY_URL, {
+      'bvid': bvid,
+      'cid': cid,
+      'qn': 80,
+      'fnval': 16,
+      'fnver': 0,
+      'fourk': 1,
+      'platform': 'pc',
+      'try_look': 1,
       'web_location': 1315873
     }, ChannelType.Web);
   }

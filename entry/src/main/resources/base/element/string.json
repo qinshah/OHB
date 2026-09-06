@@ -71,6 +71,10 @@
     {
       "name": "pref_danmaku_merge_desc",
       "value": "Merge identical danmaku and show a counter"
+    },
+    {
+      "name": "quality_picker_title",
+      "value": "Video quality"
     }
   ]
 }
