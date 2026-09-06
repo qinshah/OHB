@@ -88,6 +88,28 @@
   { "name": "settings_dark_mode_title", "value": "深色模式" }
   ```
 
+## 5. 日志
+
+* 统一直接使用系统 `hilog`（`@kit.PerformanceAnalysisKit`）打印日志，**禁止**封装 hilog，也**禁止**使用已封装的 [Logger.ets](entry/src/main/ets/common/utils/Logger.ets)。
+
+* 每个使用日志的文件，TAG 统一定义在**文件最下方**：`const TAG = XXX.name ?? 'XXX'`（`XXX` 为当前文件的主类/组件名）。
+
+* 示例：
+
+  ```ets
+  import { hilog } from '@kit.PerformanceAnalysisKit';
+
+  @Component
+  export struct XxxPage {
+    aboutToAppear(): void {
+      hilog.info(0x0000, TAG, 'onAppear');
+    }
+  }
+
+  // TAG 固定写在文件最下方
+  const TAG = XxxPage.name ?? 'XxxPage';
+  ```
+
 ## 附：忽略目录
 
 `.trae/`、`.workbuddy/`、`.codegenie/` 为本地工具目录，已加入 `.gitignore`，不要将其中的文件提交或纳入构建。
