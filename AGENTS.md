@@ -110,6 +110,19 @@
   const TAG = XxxPage.name ?? 'XxxPage';
   ```
 
+## 6. 参考项目 PiliPlus
+
+* `./PiliPlus` 是 [PiliPlus](https://github.com/dev4harmony/PiliPlus)（Flutter 版 B 站第三方客户端）的 **git 子模块**，作为本项目的参考实现。它是**只读参考**：不要修改其中代码，也不要将其纳入 OHB 构建。
+
+* 当需求未说明实现细节、或不确定某个 B 站接口如何调用（参数、签名、风控头）时，**优先查阅 PiliPlus 源码**寻找对应实现，再映射到 ArkTS：
+  * `lib/http/`：各业务模块的请求层（api.dart 为接口 URL 清单，各业务文件含完整请求参数与请求头）
+  * `lib/common/constants.dart`：appkey/appsec、UA、statistics 等常量
+  * `lib/utils/`：签名（AppSign/WbiSign）、账号体系、buvid 生成等工具
+
+* 典型场景：App 通道签名参数、WBI 签名、-352 风控（buvid 头 / build / statistics 参数）、弹幕 protobuf 接口字段、画质列表解析等，均可直接对照 PiliPlus 的请求实现。
+
+* 子模块常用命令：`git submodule update --init`（克隆后初始化）、`git submodule update --remote PiliPlus`（更新到上游最新）。
+
 ## 附：忽略目录
 
 `.trae/`、`.workbuddy/`、`.codegenie/` 为本地工具目录，已加入 `.gitignore`，不要将其中的文件提交或纳入构建。
