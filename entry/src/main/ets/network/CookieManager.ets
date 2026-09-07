@@ -155,4 +155,22 @@ export class CookieManager {
     const rand5 = Math.floor(Math.random() * 90000) + 10000;
     this.cookies.set('buvid3', `${uuid}${rand5}infoc`);
   }
+
+  /**
+   * App 端设备 buvid（请求头 buvid 用）。
+   * B 站安卓客户端格式为 "XY" + 12 位大写十六进制（如 XYaaaaaaaaaaaa），
+   * 与 buvid3 Cookie（UUID+infoc）不同；App 接口风控按此格式校验。
+   * 此处从 buvid3 的 hex 部分派生，保证同一安装内稳定。
+   */
+  getAppBuvid(): string {
+    const buvid3 = this.get('buvid3');
+    if (buvid3.length === 0) {
+      return '';
+    }
+    const hex = buvid3.replace(/-/g, '').replace(/infoc/g, '').replace(/[^0-9a-fA-F]/g, '');
+    if (hex.length < 12) {
+      return '';
+    }
+    return `XY${hex.substring(0, 12).toUpperCase()}`;
+  }
 }

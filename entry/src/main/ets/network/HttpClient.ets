@@ -1,12 +1,14 @@
 import { http } from '@kit.NetworkKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AppConstants } from '../common/constants/AppConstants';
 import { AppError } from '../common/result/AppError';
 import { Result } from '../common/result/Result';
-import { Logger } from '../common/utils/Logger';
 import { CookieManager } from './CookieManager';
 import { WbiKeys, WbiSigner } from './WbiSigner';
 import { AppSigner } from './AppSigner';
 import { ApiConstants } from './ApiConstants';
+
+// TAG 固定写在文件最下方：const TAG = HttpClient.name ?? 'HttpClient'
 
 /** B站统一响应包络 */
 interface BiliEnvelope {
@@ -43,11 +45,13 @@ export class HttpClient {
 
   /**
    * 统一请求入口。返回 Result<data 字段原始 Object>。
-   * @param url      完整 URL
-   * @param method   GET / POST
-   * @param params   query 参数（GET）或表单字段（POST form）
-   * @param channel  Web=加 WBI 签名；App=加 AppSign+access_key；Raw=不签
-   * @param useAppUa 是否使用 App UA（登录等接口）
+   * @param url          完整 URL
+   * @param method        GET / POST
+   * @param params        query 参数（GET）或表单字段（POST form）
+   * @param channel       Web=加 WBI 签名；App=加 AppSign+access_key；Raw=不签
+   * @param useAppUa      是否使用 App UA（登录等接口）
+   * @param referer       Referer 头
+   * @param extraHeaders  额外请求头（App 接口风控用：buvid / App UA / fp_local 等，覆盖同名默认头）
    */
   async request(
     url: string,
@@ -55,7 +59,8 @@ export class HttpClient {
     params: Record<string, string | number | boolean>,
     channel: ChannelType,
     useAppUa: boolean = false,
-    referer: string = AppConstants.REFERER
+    referer: string = AppConstants.REFERER,
+    extraHeaders?: Record<string, string>
   ): Promise<Result<Object>> {
     try {
       let finalParams = params;
@@ -93,15 +98,22 @@ export class HttpClient {
         'env': 'prod',
         'app-key': 'android64'
       };
+      // 额外头合并（同名覆盖：App 接口风控需覆盖 UA 并补 buvid/fp_local 等）
+      if (extraHeaders !== undefined && extraHeaders !== null) {
+        const hks = Object.keys(extraHeaders);
+        for (let i = 0; i < hks.length; i++) {
+          header[hks[i]] = extraHeaders[hks[i]];
+        }
+      }
       if (method === http.RequestMethod.POST) {
         header['Content-Type'] = 'application/x-www-form-urlencoded';
       }
 
-      Logger.info('Http', `${method} ${requestUrl}`);
+      hilog.info(0x0000, TAG, '%{public}s %{public}s', method, requestUrl);
       const resp = await this.doRequest(requestUrl, method, header, extraData);
-      return this.parseEnvelope(resp);
+      return this.parseEnvelope(resp, requestUrl);
     } catch (e) {
-      Logger.error('Http', `request fail ${url}: ${JSON.stringify(e)}`);
+      hilog.error(0x0000, TAG, 'request fail %{public}s: %{public}s', url, JSON.stringify(e));
       const err = e as BusinessErrorLike;
       if (err !== null && err !== undefined && err.code !== undefined && typeof err.code === 'number') {
         return Result.err<Object>(AppError.network(`code=${err.code}`));
@@ -111,8 +123,8 @@ export class HttpClient {
   }
 
   async get(url: string, params: Record<string, string | number | boolean>, channel: ChannelType = ChannelType.Raw,
-    referer: string = AppConstants.REFERER): Promise<Result<Object>> {
-    return this.request(url, http.RequestMethod.GET, params, channel, false, referer);
+    referer: string = AppConstants.REFERER, extraHeaders?: Record<string, string>): Promise<Result<Object>> {
+    return this.request(url, http.RequestMethod.GET, params, channel, false, referer, extraHeaders);
   }
 
   /**
@@ -159,7 +171,7 @@ export class HttpClient {
         'Referer': referer,
         'Cookie': CookieManager.getInstance().buildCookieHeader()
       };
-      Logger.info('Http', `GET(binary) ${requestUrl}`);
+      hilog.info(0x0000, TAG, 'GET(binary) %{public}s', requestUrl);
       const req = http.createHttp();
       try {
         const resp = await req.request(requestUrl, {
@@ -185,7 +197,7 @@ export class HttpClient {
         req.destroy();
       }
     } catch (e) {
-      Logger.error('Http', `getBinary fail ${url}: ${JSON.stringify(e)}`);
+      hilog.error(0x0000, TAG, 'getBinary fail %{public}s: %{public}s', url, JSON.stringify(e));
       return Result.err<ArrayBuffer>(AppError.network(JSON.stringify(e)));
     }
   }
@@ -216,7 +228,7 @@ export class HttpClient {
       } catch (e) {
         lastError = e as Error;
         attempt++;
-        Logger.warn('Http', `retry ${attempt} for ${url}`);
+        hilog.warn(0x0000, TAG, 'retry %{public}d for %{public}s', attempt, url);
       } finally {
         req.destroy();
       }
@@ -224,9 +236,10 @@ export class HttpClient {
     throw lastError ?? new Error('request failed');
   }
 
-  /** 包络解析 + 错误转换（拦截器职责） */
-  private parseEnvelope(resp: http.HttpResponse): Result<Object> {
+  /** 包络解析 + 错误转换（拦截器职责）。业务错误（code != 0）打印日志便于定位风控等问题 */
+  private parseEnvelope(resp: http.HttpResponse, url: string): Result<Object> {
     if (resp.responseCode !== 200) {
+      hilog.error(0x0000, TAG, 'http %{public}d %{public}s', resp.responseCode, url);
       return Result.err<Object>(AppError.http(resp.responseCode));
     }
     const body = resp.result as string;
@@ -234,6 +247,7 @@ export class HttpClient {
     try {
       parsed = JSON.parse(body) as BiliEnvelope;
     } catch (e) {
+      hilog.error(0x0000, TAG, 'not json: %{public}s body=%{public}s', url, body.substring(0, 120));
       return Result.err<Object>(AppError.parse(`not json: ${body.substring(0, 120)}`));
     }
     const code = parsed.code ?? -2;
@@ -241,8 +255,12 @@ export class HttpClient {
       return Result.ok<Object>(parsed.data !== undefined ? parsed.data : new EmptyData());
     }
     if (code === -101) {
+      hilog.warn(0x0000, TAG, 'unauthorized %{public}s', url);
       return Result.err<Object>(AppError.unauthorized());
     }
+    // 业务错误（如 -352 风控）：打印 code/message 与接口，方便排查
+    hilog.error(0x0000, TAG, 'biz code=%{public}d msg=%{public}s url=%{public}s',
+      code, parsed.message ?? '', url);
     return Result.err<Object>(AppError.business(code, parsed.message ?? `业务错误 ${code}`));
   }
 
@@ -279,10 +297,10 @@ export class HttpClient {
         const day = d.getDate();
         keys.dayStamp = `${d.getFullYear()}-${m < 10 ? '0' + m : m}-${day < 10 ? '0' + day : day}`;
         WbiSigner.setKeys(keys);
-        Logger.info('Http', 'wbi keys refreshed');
+        hilog.info(0x0000, TAG, 'wbi keys refreshed');
       }
     } catch (e) {
-      Logger.error('Http', `refresh wbi keys fail: ${JSON.stringify(e)}`);
+      hilog.error(0x0000, TAG, 'refresh wbi keys fail: %{public}s', JSON.stringify(e));
     } finally {
       this.refreshingWbi = false;
     }
@@ -306,3 +324,6 @@ interface BusinessErrorLike {
   code?: number;
   message?: string;
 }
+
+// TAG 固定写在文件最下方
+const TAG = HttpClient.name ?? 'HttpClient';

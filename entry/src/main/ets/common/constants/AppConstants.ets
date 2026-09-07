@@ -25,6 +25,11 @@ export class AppConstants {
   /** App 端 UA（登录 / App 接口使用，与 PiliPlus 一致避免风控） */
   static readonly APP_UA: string =
     'Mozilla/5.0 BiliDroid/2.0.1 (bbcallen@gmail.com) os/android model/android_hd mobi_app/android_hd build/2001100 channel/master innerVer/2001100 osVer/15 network/2';
+  /** 移动端 App UA（app-interface/v2 等移动端 App 接口风控校验用，对齐 B 站安卓客户端 8.43.0） */
+  static readonly APP_UA_MOBILE: string =
+    'Mozilla/5.0 BiliDroid/8.43.0 (bbcallen@gmail.com) os/android model/android mobi_app/android build/8430300 channel/master innerVer/8430300 osVer/15 network/2';
+  /** App 端 statistics 字段（app-interface 风控参数，对齐安卓客户端 8.43.0） */
+  static readonly APP_STATISTICS: string = '{"appId":1,"platform":3,"version":"8.43.0","abtest":""}';
 
   // ---- App 签名（TV/App 接口 AppSign） ----
   static readonly APP_KEY: string = 'dfca71928277209b';

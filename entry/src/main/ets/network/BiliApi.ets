@@ -2,6 +2,8 @@ import { Result } from '../common/result/Result';
 import { AppConstants } from '../common/constants/AppConstants';
 import { ApiConstants } from './ApiConstants';
 import { ChannelType, HttpClient } from './HttpClient';
+import { AppSigner } from './AppSigner';
+import { CookieManager } from './CookieManager';
 import { SearchType } from '../models/SearchModels';
 
 /**
@@ -361,24 +363,80 @@ export class BiliApi {
 
   // ---------- 直播（P2 Task 15） ----------
 
-  /** 直播分区列表（App 通道） */
+  /** 直播分区列表（App 通道，对齐 PiliPlus liveAreaList 参数防 -352 风控） */
   liveAreaList(): Promise<Result<Object>> {
-    return this.http.get(ApiConstants.LIVE_AREA_LIST, {}, ChannelType.App);
+    const params: Record<string, string | number | boolean> = {
+      'actionKey': 'appkey',
+      'build': 8430300,
+      'channel': 'master',
+      'version': '8.43.0',
+      'c_locale': 'zh_CN',
+      'device': 'android',
+      'disable_rcmd': 0,
+      'mobi_app': 'android',
+      'platform': 'android',
+      's_locale': 'zh_CN',
+      'statistics': AppConstants.APP_STATISTICS
+    };
+    return this.http.get(ApiConstants.LIVE_AREA_LIST, params, ChannelType.App);
   }
 
-  /** 直播二级列表（App 通道，parentAreaId=0 全部） */
+  /**
+   * 直播二级列表（parentAreaId=0 全部）。
+   * 参数与请求头对齐 PiliPlus liveSecondList。
+   * 注意：此处走"游客模式"（不带 access_key）——HD 端签发的 access_key
+   * 配合移动端 build/appkey 参数会触发 B 站 -352 风控（curl 实测复现）；
+   * PiliPlus 的 recommend.accessKey 为 null 时同样省略该参数。
+   * 故绕过 App 通道的自动注入，改为 Raw 通道 + 手动 AppSign 签名。
+   */
   liveSecondList(page: number, areaId: number, parentAreaId: number): Promise<Result<Object>> {
     const params: Record<string, string | number | boolean> = {
+      'actionKey': 'appkey',
+      'channel': 'master',
+      'parent_area_id': parentAreaId,
+      'build': 8430300,
+      'version': '8.43.0',
+      'c_locale': 'zh_CN',
+      'device': 'android',
+      'device_name': 'android',
+      'device_type': 0,
+      'fnval': 912,
+      'disable_rcmd': 0,
+      'https_url_req': 1,
+      'mobi_app': 'android',
+      'module_select': 0,
+      'network': 'wifi',
       'page': page,
       'page_size': 20,
-      'parent_area_id': parentAreaId,
-      'sort_type': '',
-      'platform': 'android'
+      'platform': 'android',
+      'qn': 0,
+      'tag_version': 1,
+      's_locale': 'zh_CN',
+      'scale': 2,
+      'statistics': AppConstants.APP_STATISTICS
     };
+    // area_id 仅在选定具体分区时携带（PiliPlus：null 时省略，与"全部"语义一致）；
+    // sort_type 为空时同样省略（PiliPlus 传 null 省略，空串会触发风控）
     if (areaId > 0) {
       params['area_id'] = areaId;
     }
-    return this.http.get(ApiConstants.LIVE_SECOND_LIST, params, ChannelType.App);
+    // 风控请求头（对齐 PiliPlus）：移动端 App UA + App 设备 buvid（XY+hex）+ 固定指纹字段
+    const headers: Record<string, string> = {
+      'User-Agent': AppConstants.APP_UA_MOBILE,
+      'app-key': 'android',
+      'buvid': CookieManager.getInstance().getAppBuvid(),
+      'fp_local': '1111111111111111111111111111111111111111111111111111111111111111',
+      'fp_remote': '1111111111111111111111111111111111111111111111111111111111111111',
+      'session_id': '11111111',
+      'x-bili-trace-id': '11111111111111111111111111111111:1111111111111111:0:0',
+      'x-bili-aurora-eid': '',
+      'x-bili-aurora-zone': '',
+      'bili-http-engine': 'cronet'
+    };
+    // Raw 通道 + 手动签名（不加 access_key，见方法注释）
+    return AppSigner.sign(params).then((signed: Record<string, string | number | boolean>): Promise<Result<Object>> => {
+      return this.http.get(ApiConstants.LIVE_SECOND_LIST, signed, ChannelType.Raw, AppConstants.REFERER, headers);
+    });
   }
 
   /** 直播间播放信息（取第一个可播流） */
