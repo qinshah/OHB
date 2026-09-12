@@ -75,10 +75,24 @@ tag 推送即自动触发 Release CI（构建 HAP 并创建 GitHub Release）。
 gh run list --repo qinshah/OHB --limit 3
 ```
 
-确认新 tag 对应的 workflow 处于 queued/in_progress 状态。失败时用 `gh run view <id> --log-failed` 排查。
+确认新 tag 对应的 workflow 处于 queued/in_progress 状态（等待完成可 `gh run watch <id> --exit-status`）。
+失败时用 `gh run view <id> --log-failed` 排查。
+
+### 7. 发布 Release（draft → 正式版）
+
+CI 创建的是 **draft** release，需手动转为正式版对外可见：
+
+```bash
+gh release edit vX.Y.Z --repo qinshah/OHB --draft=false --latest
+gh release list --repo qinshah/OHB --limit 3   # 校验新版本显示 Latest
+```
+
+产物 `entry-default-unsigned.hap` 由 CI 附在 release 上，无需手动上传。
 
 ## 注意事项
 
 - 发版前确认工作区干净：`git status`（`LandscapePortraitToggle/`、`PiliPlus/` 为本地参考项目，不提交）
 - 版本号更新必须与 tag 同步，否则 CI 产物版本不一致
 - tag 信息使用中文（与项目提交信息风格一致）
+- 版本号编码规律：`versionCode = minor * 1000000 + patch * 1000`（如 v0.2.0 → 2000000，v0.2.5 → 2005000）
+- 改动建议分模块多次提交（如 画质 / 取流 / 播放器 / 文档），不要一次性全提
