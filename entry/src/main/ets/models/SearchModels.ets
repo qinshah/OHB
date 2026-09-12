@@ -62,6 +62,8 @@ export class SearchRow {
   online: number = 0;
   area: string = '';
   // ---- 番剧 ----
+  /** 番剧详情接口用 season_id（不可用 media_id 代替，media_id 是媒体页 id） */
+  seasonId: number = 0;
   mediaId: number = 0;
   styles: string = '';
   areas: string = '';

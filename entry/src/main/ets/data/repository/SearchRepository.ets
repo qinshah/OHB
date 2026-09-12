@@ -57,6 +57,7 @@ interface RawSearchItem {
   online?: number;
   area?: string;
   // bangumi
+  season_id?: number;
   media_id?: number;
   styles?: string;
   areas?: string;
@@ -166,6 +167,8 @@ export class SearchRepository {
     } else if (t === 'media_bangumi') {
       row.kind = SearchRowKind.Bangumi;
       row.mediaId = it.media_id ?? 0;
+      // 详情接口只认 season_id；搜索接口同时给 season_id 与 media_id，取前者
+      row.seasonId = it.season_id ?? 0;
       row.title = SearchRepository.stripEm(it.title ?? '');
       row.cover = VideoCard.fixUrl(it.cover ?? '');
       row.styles = it.styles ?? '';

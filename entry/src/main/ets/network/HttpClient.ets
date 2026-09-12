@@ -10,11 +10,18 @@ import { ApiConstants } from './ApiConstants';
 
 // TAG 固定写在文件最下方：const TAG = HttpClient.name ?? 'HttpClient'
 
-/** B站统一响应包络 */
+/**
+ * B站统一响应包络。
+ * 注意：载荷字段不统一——多数接口放在 data，番剧类接口（pgc/view、pgc/player）
+ * 放在 result，解析时两者都要兼容。
+ */
 interface BiliEnvelope {
   code?: number;
   message?: string;
+  /** 常规接口载荷（data 字段） */
   data?: Object;
+  /** 番剧等接口载荷（result 字段） */
+  result?: Object;
 }
 
 export enum ChannelType {
@@ -252,7 +259,17 @@ export class HttpClient {
     }
     const code = parsed.code ?? -2;
     if (code === 0) {
-      return Result.ok<Object>(parsed.data !== undefined ? parsed.data : new EmptyData());
+      // data 优先；番剧类接口（/pgc/view/web/season、/pgc/player/web/v2/playurl）的
+      // 载荷在 result 下，缺失时回退，避免调用方拿到空对象后报「数据解析失败」
+      const data = parsed.data;
+      if (data !== undefined && data !== null) {
+        return Result.ok<Object>(data);
+      }
+      const result = parsed.result;
+      if (result !== undefined && result !== null) {
+        return Result.ok<Object>(result);
+      }
+      return Result.ok<Object>(new EmptyData());
     }
     if (code === -101) {
       hilog.warn(0x0000, TAG, 'unauthorized %{public}s', url);

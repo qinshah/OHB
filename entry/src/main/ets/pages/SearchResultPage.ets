@@ -311,9 +311,12 @@ export struct SearchResultPage {
       .alignItems(HorizontalAlign.Start)
       .padding(4)
       .onClick(() => {
-        if (row.kind === SearchRowKind.Bangumi && row.mediaId > 0) {
-          const p: BangumiDetailParam = { seasonId: row.mediaId };
-          Route.push(Route.bangumiDetail, p);
+        if (row.kind === SearchRowKind.Bangumi) {
+          const sid = row.seasonId > 0 ? row.seasonId : row.mediaId;
+          if (sid > 0) {
+            const p: BangumiDetailParam = { seasonId: sid };
+            Route.push(Route.bangumiDetail, p);
+          }
         }
       })
     }

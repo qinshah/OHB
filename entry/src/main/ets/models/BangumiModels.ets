@@ -32,8 +32,10 @@ export class BangumiEpisode {
   title: string = '';
   longTitle: string = '';
   cover: string = '';
+  /** 时长（毫秒） */
   duration: number = 0;
-  pubTime: string = '';
+  /** 首播时间（Unix 秒，0 表示未知） */
+  pubTime: number = 0;
   /** 是否付费/会员 */
   badge: string = '';
 }

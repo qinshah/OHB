@@ -1,49 +1,26 @@
 import { DataState } from '../common/state/DataState';
 import { AppError } from '../common/result/AppError';
-import { BangumiDetail, BangumiEpisode } from '../models/BangumiModels';
+import { BangumiDetail } from '../models/BangumiModels';
 import { BangumiRepository } from '../data/repository/BangumiRepository';
-import { Player } from '../player/Player';
-import { PlayerRepository } from '../repository/PlayerRepository';
 
 /**
- * 番剧详情 ViewModel（P2 Task 20）：详情、追番、选集播放。
- * 播放器经 PlayerRepository 管理（key=bangumi_seasonId）。
+ * 番剧详情 ViewModel：季详情 + 追番。
+ *
+ * 播放不再由本页承担——剧集播放统一走视频页（Route.video，按 bvid 打开），
+ * 复用其渲染节点/控制栏/弹幕/全屏能力，故本 VM 不持有任何播放器实例。
  */
 @Observed
 export class BangumiDetailViewModel {
   state: DataState<BangumiDetail> = DataState.idle<BangumiDetail>();
   detail: BangumiDetail | null = null;
-  /** 当前选中剧集 */
-  currentEpisode: BangumiEpisode | null = null;
-  playError: string = '';
   tipText: string = '';
   isBusy: boolean = false;
-  cntlr: Player;
-  private cntlrKey: string;
+  /** 当前季 id（「其他季」切换后随之更新，重试与刷新以它为准） */
+  seasonId: number = 0;
   private repo: BangumiRepository = new BangumiRepository();
-  /** 占位播放器 id 自增序号，避免多实例碰撞 */
-  private static vmSeq: number = 0;
-
-  constructor() {
-    // 构造时先以占位 id 登记，页面 aboutToAppear 经 attachCntlr(seasonId) 换为真实实例
-    this.cntlrKey = `__bangumi_vm_${BangumiDetailViewModel.vmSeq}`;
-    BangumiDetailViewModel.vmSeq++;
-    this.cntlr = PlayerRepository.create(this.cntlrKey);
-  }
-
-  /** 绑定 seasonId 对应的播放器（页面 aboutToAppear 调用；同一 seasonId 复用已有实例） */
-  attachCntlr(seasonId: number): void {
-    const key = `bangumi_${seasonId}`;
-    if (this.cntlrKey === key) {
-      return;
-    }
-    const target = PlayerRepository.create(key);
-    PlayerRepository.remove(this.cntlrKey); // 释放占位/旧实例
-    this.cntlr = target;
-    this.cntlrKey = key;
-  }
 
   async load(seasonId: number): Promise<void> {
+    this.seasonId = seasonId;
     this.state = DataState.loading<BangumiDetail>();
     const r = await this.repo.getDetail(seasonId);
     if (!r.isOk) {
@@ -52,24 +29,6 @@ export class BangumiDetailViewModel {
     }
     this.detail = r.value;
     this.state = DataState.data<BangumiDetail>(this.detail);
-    if (this.detail.episodes.length > 0) {
-      await this.selectEpisode(this.detail.episodes[0]);
-    }
-  }
-
-  async selectEpisode(episode: BangumiEpisode): Promise<void> {
-    this.currentEpisode = episode;
-    this.playError = '';
-    if (episode.bvid.length === 0 || episode.cid <= 0) {
-      this.playError = '该剧集暂不支持播放';
-      return;
-    }
-    const r = await this.repo.getPlayUrl(episode.bvid, episode.cid);
-    if (!r.isOk) {
-      this.playError = r.error.message;
-      return;
-    }
-    await this.cntlr.load(r.value.url, Player.defaultHeaders());
   }
 
   async toggleFollow(): Promise<void> {
@@ -77,6 +36,7 @@ export class BangumiDetailViewModel {
       return;
     }
     this.isBusy = true;
+    this.tipText = '';
     const r = await this.repo.follow(this.detail.seasonId, !this.detail.isFollow);
     this.isBusy = false;
     if (r.isOk) {
@@ -84,10 +44,6 @@ export class BangumiDetailViewModel {
     } else {
       this.tipText = r.error.message;
     }
-  }
-
-  async release(): Promise<void> {
-    await PlayerRepository.remove(this.cntlrKey);
   }
 
   get errorMessage(): string {

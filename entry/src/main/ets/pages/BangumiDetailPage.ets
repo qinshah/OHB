@@ -3,108 +3,91 @@ import { Route } from '../framework/Route';
 import { FormatUtils } from '../common/utils/FormatUtils';
 import { BangumiDetail, BangumiEpisode, BangumiItem } from '../models/BangumiModels';
 import { BangumiDetailViewModel } from '../viewmodel/BangumiDetailViewModel';
-import { PlaybackState } from '../player/PlayerTypes';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
 
+/** 封面遮罩（顶透明 → 底部压暗，保证播放按钮与文字可读） */
+const BANNER_SCRIM_CLEAR: string = '#00000000';
+const BANNER_SCRIM_SOLID: string = '#99000000';
+
 /**
- * 番剧详情页（P2 Task 20）：详情、追番、选集播放。
+ * 番剧详情页：季信息、追番、选集。
+ *
+ * 播放不在本页内实现——剧集统一「复用视频页」：
+ * 点封面播放条或任意一集 → Route.push(Route.video, bvid)，
+ * 由视频页负责渲染节点/控制栏/弹幕/全屏（见 VideoPage + VideoDetailVM）。
+ * 普通视频接口对番剧分集的 bvid 同样有效（view/playurl 均返回正常数据）。
  */
 @Component
 export struct BangumiDetailPage {
   @Prop seasonId: number = 0;
   @State vm: BangumiDetailViewModel = new BangumiDetailViewModel();
-  @State playing: boolean = false;
-  @State posMs: number = 0;
-  @State durMs: number = 0;
-  private xcController: XComponentController = new XComponentController();
-  private bound: boolean = false;
-  private uiTimer: number = -1;
 
   aboutToAppear(): void {
-    // 先经 PlayerRepository 以 seasonId 绑定/创建播放器
-    this.vm.attachCntlr(this.seasonId);
-    this.vm.cntlr.attachUIContext(this.getUIContext());
     this.vm.load(this.seasonId);
-    this.startUiTimer();
   }
 
-  aboutToDisappear(): void {
-    this.stopUiTimer();
-    this.vm.release();
+  /** 重试 / 其他季切换后刷新，以 VM 记录的最新季号为准 */
+  private reload(): void {
+    this.vm.load(this.vm.seasonId > 0 ? this.vm.seasonId : this.seasonId);
   }
 
-  private startUiTimer(): void {
-    if (this.uiTimer >= 0) {
+  /** 复用视频页播放指定剧集 */
+  private playEpisode(ep: BangumiEpisode): void {
+    if (ep.bvid.length === 0) {
       return;
     }
-    this.uiTimer = setInterval(() => {
-      if (this.vm.cntlr.state === PlaybackState.Playing) {
-        this.vm.cntlr.syncProgress();
-      }
-      this.playing = this.vm.cntlr.state === PlaybackState.Playing;
-      this.posMs = this.vm.cntlr.positionMs;
-      this.durMs = this.vm.cntlr.durationMs;
-    }, 500);
+    Route.push(Route.video, ep.bvid);
   }
 
-  private stopUiTimer(): void {
-    if (this.uiTimer >= 0) {
-      clearInterval(this.uiTimer);
-      this.uiTimer = -1;
+  /** 播放条默认点击第 1 集 */
+  private playFirst(): void {
+    const d = this.vm.detail;
+    if (d === null || d.episodes.length === 0) {
+      return;
     }
+    this.playEpisode(d.episodes[0]);
   }
 
   build() {
     NavDestination() {
       Column() {
-        // 播放区
+        // ===== 播放条：季封面 + 播放按钮（点击进入视频页）=====
         Stack() {
-          // TODO 视频
-          // width('100%')
-          //   .height('100%')
-          //   .backgroundColor(Color.Black)
+          if (this.vm.detail !== null) {
+            Image(this.vm.detail.cover)
+              .width('100%')
+              .height('100%')
+              .objectFit(ImageFit.Cover)
+              .alt($r('app.media.startIcon'))
 
-          // 返回
-          Stack() {
-            SymbolGlyph($r('sys.symbol.chevron_left'))
-              .fontSize(20)
-              .fontColor([Color.White])
-              .padding(6)
-          }
-          .width(38)
-          .height(38)
-          .borderRadius(19)
-          .backgroundColor('#66000000')
-          .position({ x: 8, y: 8 })
-          .onClick(() => {
-            Route.pop();
-          })
-
-          // 播放控制
-          if (this.vm.playError.length === 0) {
-            Column({ space: 8 }) {
-              Stack() {
-                SymbolGlyph(this.playing ? $r('sys.symbol.pause_fill') : $r('sys.symbol.play_fill'))
-                  .fontSize(20)
-                  .fontColor([Color.White])
-              }
-              .width(44)
-              .height(44)
-              .borderRadius(22)
-              .backgroundColor('#66000000')
-              .onClick(() => {
-                this.vm.cntlr.togglePlay();
+            Column()
+              .width('100%')
+              .height('100%')
+              .linearGradient({
+                angle: 180,
+                colors: [[BANNER_SCRIM_CLEAR, 0.0], [BANNER_SCRIM_CLEAR, 0.35], [BANNER_SCRIM_SOLID, 1.0]]
               })
 
-              Text(`${FormatUtils.durationMs(this.posMs)} / ${FormatUtils.durationMs(this.durMs)}`)
-                .fontSize(11)
-                .fontColor(Color.White)
+            if (this.vm.detail.episodes.length > 0) {
+              Column({ space: 6 }) {
+                Stack() {
+                  SymbolGlyph($r('sys.symbol.play_fill'))
+                    .fontSize(26)
+                    .fontColor([Color.White])
+                }
+                .width(56)
+                .height(56)
+                .borderRadius(28)
+                .backgroundColor('#66000000')
+                Text($r('app.string.bangumi_detail_play'))
+                  .fontSize(12)
+                  .fontColor(Color.White)
+              }
+              .onClick(() => {
+                this.playFirst();
+              })
             }
-            .justifyContent(FlexAlign.End)
-            .width('100%')
-            .padding({ right: 12, bottom: 8 })
-            .alignItems(HorizontalAlign.End)
           }
         }
         .width('100%')
@@ -119,7 +102,7 @@ export struct BangumiDetailPage {
             message: this.vm.errorMessage,
             retryable: true,
             onRetry: () => {
-              this.vm.load(this.seasonId);
+              this.reload();
             }
           })
             .layoutWeight(1)
@@ -141,16 +124,18 @@ export struct BangumiDetailPage {
                     .fontColor(AppColors.TEXT_PRIMARY)
                     .maxLines(2)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  Text(`全${this.vm.detail.total}话`)
+                  Text($r('app.string.bangumi_detail_total_ep', this.vm.detail.total))
                     .fontSize(12)
                     .fontColor(AppColors.TEXT_SECONDARY)
-                  Text(`${FormatUtils.count(this.vm.detail.viewCount)}播放`)
+                  Text($r('app.string.bangumi_detail_views_count', FormatUtils.count(this.vm.detail.viewCount)))
                     .fontSize(12)
                     .fontColor(AppColors.TEXT_SECONDARY)
-                  Text(`${FormatUtils.count(this.vm.detail.followCount)}追番`)
+                  Text($r('app.string.bangumi_detail_follow_count', FormatUtils.count(this.vm.detail.followCount)))
                     .fontSize(12)
                     .fontColor(AppColors.TEXT_SECONDARY)
-                  Text(this.vm.detail.isFollow ? '已追番' : '+ 追番')
+                  Text(this.vm.detail.isFollow
+                    ? $r('app.string.bangumi_detail_followed')
+                    : $r('app.string.bangumi_detail_follow'))
                     .fontSize(13)
                     .fontColor(this.vm.detail.isFollow ? AppColors.TEXT_SECONDARY : Color.White)
                     .backgroundColor(this.vm.detail.isFollow ? AppColors.CARD_BG : AppColors.BRAND)
@@ -186,15 +171,8 @@ export struct BangumiDetailPage {
                   .width('100%')
               }
 
-              if (this.vm.playError.length > 0) {
-                Text(this.vm.playError)
-                  .fontSize(12)
-                  .fontColor(AppColors.TEXT_SECONDARY)
-                  .width('100%')
-              }
-
-              // 选集
-              Text(`选集（${this.vm.detail.episodes.length}）`)
+              // 选集（点击进入视频页播放）
+              Text($r('app.string.bangumi_detail_episodes', this.vm.detail.episodes.length))
                 .fontSize(15)
                 .fontWeight(FontWeight.Medium)
                 .fontColor(AppColors.TEXT_PRIMARY)
@@ -203,8 +181,8 @@ export struct BangumiDetailPage {
                 ForEach(this.vm.detail.episodes, (ep: BangumiEpisode) => {
                   Text(ep.title)
                     .fontSize(12)
-                    .fontColor(this.vm.currentEpisode?.epId === ep.epId ? Color.White : AppColors.TEXT_PRIMARY)
-                    .backgroundColor(this.vm.currentEpisode?.epId === ep.epId ? AppColors.BRAND : AppColors.CARD_BG)
+                    .fontColor(AppColors.TEXT_PRIMARY)
+                    .backgroundColor(AppColors.CARD_BG)
                     .borderRadius(12)
                     .padding({
                       left: 12,
@@ -214,8 +192,7 @@ export struct BangumiDetailPage {
                     })
                     .margin({ right: 8, bottom: 8 })
                     .onClick(() => {
-                      this.vm.selectEpisode(ep);
-                      this.bound = false;
+                      this.playEpisode(ep);
                     })
                 }, (ep: BangumiEpisode) => `${ep.epId}`)
               }
@@ -223,7 +200,7 @@ export struct BangumiDetailPage {
 
               // 其他季
               if (this.vm.detail.seasons.length > 0) {
-                Text('其他季')
+                Text($r('app.string.bangumi_detail_other_seasons'))
                   .fontSize(15)
                   .fontWeight(FontWeight.Medium)
                   .fontColor(AppColors.TEXT_PRIMARY)
@@ -238,12 +215,11 @@ export struct BangumiDetailPage {
                     .borderRadius(8)
                     .onClick(() => {
                       this.vm.load(season.seasonId);
-                      this.bound = false;
                     })
                 }, (season: BangumiItem) => `${season.seasonId}`)
               }
 
-              EmptyView({ tip: '没有更多内容了' })
+              EmptyView({ tip: $r('app.string.bangumi_detail_end') })
                 .height(80)
             }
             .width('100%')

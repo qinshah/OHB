@@ -207,6 +207,42 @@
     {
       "name": "bangumi_rank_empty",
       "value": "No ranking data"
+    },
+    {
+      "name": "bangumi_detail_total_ep",
+      "value": "%d episodes"
+    },
+    {
+      "name": "bangumi_detail_views_count",
+      "value": "%s views"
+    },
+    {
+      "name": "bangumi_detail_follow_count",
+      "value": "%s followers"
+    },
+    {
+      "name": "bangumi_detail_follow",
+      "value": "Follow"
+    },
+    {
+      "name": "bangumi_detail_followed",
+      "value": "Following"
+    },
+    {
+      "name": "bangumi_detail_episodes",
+      "value": "Episodes (%d)"
+    },
+    {
+      "name": "bangumi_detail_other_seasons",
+      "value": "Other seasons"
+    },
+    {
+      "name": "bangumi_detail_end",
+      "value": "No more content"
+    },
+    {
+      "name": "bangumi_detail_play",
+      "value": "Play"
     }
   ]
 }

@@ -207,6 +207,42 @@
     {
       "name": "bangumi_rank_empty",
       "value": "暂无排行数据"
+    },
+    {
+      "name": "bangumi_detail_total_ep",
+      "value": "全%d话"
+    },
+    {
+      "name": "bangumi_detail_views_count",
+      "value": "%s播放"
+    },
+    {
+      "name": "bangumi_detail_follow_count",
+      "value": "%s追番"
+    },
+    {
+      "name": "bangumi_detail_follow",
+      "value": "追番"
+    },
+    {
+      "name": "bangumi_detail_followed",
+      "value": "已追番"
+    },
+    {
+      "name": "bangumi_detail_episodes",
+      "value": "选集（%d）"
+    },
+    {
+      "name": "bangumi_detail_other_seasons",
+      "value": "其他季"
+    },
+    {
+      "name": "bangumi_detail_end",
+      "value": "没有更多内容了"
+    },
+    {
+      "name": "bangumi_detail_play",
+      "value": "播放"
     }
   ]
 }

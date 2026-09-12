@@ -44,35 +44,51 @@ interface RawRankData {
 }
 
 interface RawEpisode {
+  /** 剧集 id（与 ep_id 同值，接口两个字段都给） */
   id?: number;
+  ep_id?: number;
   aid?: number;
   bvid?: string;
   cid?: number;
   title?: string;
   long_title?: string;
   cover?: string;
+  /** 时长（毫秒，番剧单位为 ms） */
   duration?: number;
-  pub_time?: string;
+  /** 首播时间（Unix 秒） */
+  pub_time?: number;
   badge?: string;
 }
 
 interface RawSeason {
   season_id?: number;
   media_id?: number;
+  /** 首季/本季标题在 seasons[] 里是 season_title（title 为空） */
   title?: string;
+  season_title?: string;
   cover?: string;
   score?: number;
   index_show?: string;
+  new_ep?: RawNewEp;
 }
 
 interface RawRating {
   score?: number;
 }
 
+/** 最新一话信息（new_ep.desc 形如 "6月13日起 每周六11:00"） */
+interface RawNewEp {
+  desc?: string;
+  title?: string;
+}
+
 interface RawStat {
   views?: number;
   likes?: number;
+  /** 追番数（配合 follow_text，如 "1782.2万追番"） */
   favorites?: number;
+  /** 收藏数 */
+  favorite?: number;
 }
 
 interface RawUserStatus {
@@ -121,15 +137,29 @@ interface RawIndexData {
   has_next?: number;
 }
 
-interface RawDurl {
+interface RawPlayDurl {
   url?: string;
   backup_url?: string[];
+  /** 片长（毫秒） */
+  length?: number;
 }
 
-interface RawPlayData {
+/** /pgc/player/web/v2/playurl 的 result.video_info */
+interface RawPlayVideoInfo {
   quality?: number;
   timelength?: number;
-  durl?: RawDurl[];
+  durl?: RawPlayDurl[];
+  durls?: RawPlayDurl[];
+}
+
+/** /pgc/player/web/v2/playurl 的 result（兼容旧版平铺结构） */
+interface RawPlayResult {
+  /** v2：视频信息在 result.video_info */
+  video_info?: RawPlayVideoInfo;
+  /** v1（旧）：durl/quality 直接平铺在 result 下 */
+  durl?: RawPlayDurl[];
+  quality?: number;
+  timelength?: number;
 }
 
 /**
@@ -145,6 +175,7 @@ export class BangumiRepository {
     }
     const data = r.value as RawSeasonData;
     if (data.season_id === undefined) {
+      // 走到这里说明包络解析拿到了非 season 载荷（接口异常或字段变更）
       return Result.err<BangumiDetail>(AppError.parse('season detail invalid'));
     }
     const detail = new BangumiDetail();
@@ -153,15 +184,20 @@ export class BangumiRepository {
     detail.title = data.title ?? '';
     detail.cover = VideoCard.fixUrl(data.cover ?? '');
     detail.evaluate = data.evaluate ?? '';
-    detail.total = data.total ?? 0;
-    detail.followCount = data.stat?.favorites ?? 0;
-    detail.viewCount = data.stat?.views ?? 0;
-    detail.likeCount = data.stat?.likes ?? 0;
-    detail.favCount = data.stat?.favorites ?? 0;
+    const episodes = data.episodes ?? [];
+    // 接口 total 常为 0（如季番/长篇），回退为剧集列表长度
+    const apiTotal = data.total ?? 0;
+    detail.total = apiTotal > 0 ? apiTotal : episodes.length;
+    const stat = data.stat;
+    // favorites = 追番数（与 stat.follow_text 一致），favorite = 收藏数
+    detail.followCount = stat?.favorites ?? 0;
+    detail.viewCount = stat?.views ?? 0;
+    detail.likeCount = stat?.likes ?? 0;
+    detail.favCount = stat?.favorite ?? 0;
     detail.isFollow = (data.user_status?.follow ?? 0) === 1;
-    detail.episodes = (data.episodes ?? []).map((raw: RawEpisode) => {
+    detail.episodes = episodes.map((raw: RawEpisode) => {
       const ep = new BangumiEpisode();
-      ep.epId = raw.id ?? 0;
+      ep.epId = raw.ep_id ?? raw.id ?? 0;
       ep.aid = raw.aid ?? 0;
       ep.bvid = raw.bvid ?? '';
       ep.cid = raw.cid ?? 0;
@@ -169,11 +205,14 @@ export class BangumiRepository {
       ep.longTitle = raw.long_title ?? '';
       ep.cover = VideoCard.fixUrl(raw.cover ?? '');
       ep.duration = raw.duration ?? 0;
-      ep.pubTime = raw.pub_time ?? '';
+      ep.pubTime = raw.pub_time ?? 0;
       ep.badge = raw.badge ?? '';
       return ep;
     });
-    detail.seasons = (data.seasons ?? []).map((raw: RawSeason) => BangumiRepository.parseSeason(raw));
+    // seasons[] 会把自己也算进来，过滤掉当前季避免「其他季」出现重复空行
+    detail.seasons = (data.seasons ?? [])
+      .map((raw: RawSeason) => BangumiRepository.parseSeason(raw))
+      .filter((s: BangumiItem) => s.seasonId > 0 && s.seasonId !== detail.seasonId);
     return Result.ok<BangumiDetail>(detail);
   }
 
@@ -257,22 +296,35 @@ export class BangumiRepository {
     return Result.ok<boolean>(true);
   }
 
-  /** 剧集播放地址（复用 durl MP4 通道） */
+  /** 剧集播放地址（/pgc/player/web/v2/playurl，MP4 durl 通道，AvPlayer 可直接播） */
   async getPlayUrl(bvid: string, cid: number, qn: number = 80): Promise<Result<PlayUrlInfo>> {
     const r = await this.api.pgcPlayUrl(bvid, cid, qn);
     if (!r.isOk) {
       return Result.err<PlayUrlInfo>(r.error);
     }
-    const d = r.value as RawPlayData;
-    const durl = d.durl ?? [];
+    const res = r.value as RawPlayResult;
+    // v2 结构：result.video_info.{durl,quality,timelength}；旧版结构直接平铺在 result 下
+    const video: RawPlayVideoInfo | undefined = res.video_info;
+    let durl: RawPlayDurl[] = [];
+    let quality = 0;
+    let timelength = 0;
+    if (video !== undefined && video !== null) {
+      durl = video.durl ?? video.durls ?? [];
+      quality = video.quality ?? 0;
+      timelength = video.timelength ?? 0;
+    } else {
+      durl = res.durl ?? [];
+      quality = res.quality ?? 0;
+      timelength = res.timelength ?? 0;
+    }
     if (durl.length === 0 || durl[0].url === undefined) {
       return Result.err<PlayUrlInfo>(AppError.parse('no pgc playable url'));
     }
     const info = new PlayUrlInfo();
     info.url = VideoCard.fixUrl(durl[0].url);
     info.backupUrls = (durl[0].backup_url ?? []).map((u: string) => VideoCard.fixUrl(u));
-    info.quality = d.quality ?? 0;
-    info.timelength = d.timelength ?? 0;
+    info.quality = quality;
+    info.timelength = timelength > 0 ? timelength : (durl[0].length ?? 0);
     return Result.ok<PlayUrlInfo>(info);
   }
 
@@ -317,10 +369,11 @@ export class BangumiRepository {
     const item = new BangumiItem();
     item.seasonId = raw.season_id ?? 0;
     item.mediaId = raw.media_id ?? 0;
-    item.title = raw.title ?? '';
+    // seasons[] 用 season_title 承载标题，title 通常为空
+    item.title = raw.season_title ?? raw.title ?? '';
     item.cover = VideoCard.fixUrl(raw.cover ?? '');
     item.score = raw.score ?? 0;
-    item.indexShow = raw.index_show ?? '';
+    item.indexShow = raw.index_show ?? raw.new_ep?.desc ?? '';
     return item;
   }
 }
