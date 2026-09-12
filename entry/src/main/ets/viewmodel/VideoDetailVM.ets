@@ -2,14 +2,18 @@ import { DataState } from '../common/state/DataState';
 import { AppError } from '../common/result/AppError';
 import { VideoDetail, VideoPage } from '../models/VideoDetail';
 import { PlayUrlInfo } from '../models/PlayUrlInfo';
+import { Quality, QualityUtil } from '../models/Quality';
 import { VideoCard } from '../models/VideoCard';
 import { VideoRepository } from '../data/repository/VideoRepository';
 import { BangumiRepository } from '../data/repository/BangumiRepository';
 import { BangumiEpisode } from '../models/BangumiModels';
 import { Player } from '../player/Player';
+import { PlaySource } from '../player/PlayerTypes';
 import { PlayerRepository } from '../repository/PlayerRepository';
 import { Pref } from '../services/storage/Pref';
 import { DanmakuControllerManager } from '../services/danmaku/DanmakuController';
+import { promptAction } from '@kit.ArkUI';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 /**
  * 视频详情 ViewModel（Task 9）：详情 + 播放地址加载，持有并驱动 PlayerController。
@@ -301,13 +305,9 @@ export class VideoDetailVM {
       this.playError = r.error.message;
       return;
     }
-    this.playUrlInfo = r.value;
-    // 画质列表/当前画质同步给 Player（控制栏画质按钮数据源）
-    this.playerVM.qualityOptions = this.playUrlInfo.qualityOptions;
-    this.playerVM.currentQuality = this.playUrlInfo.quality;
+    await this.applyPlayUrl(r.value, 0);
     // 弹幕数据源跟随 cid（分P切换时 DanmakuLayer 检测到变化会重置渲染并拉取新数据）
     this.playerVM.danmakuCid = cid;
-    await this.playerVM.load(this.playUrlInfo.url, Player.defaultHeaders());
     // 应用默认倍速（设置中心，AP-4）
     const speed = Pref.defaultSpeed.get();
     if (speed !== 1) {
@@ -316,11 +316,42 @@ export class VideoDetailVM {
   }
 
   /**
-   * 切换画质（参考 PiliPlus updatePlayer 逻辑，适配 durl 模式）：
-   * - durl 单流模式下不同 qn 对应不同 URL，需带新 qn 重新请求 playurl
-   *   （PiliPlus 是 DASH 多流缓存切换，无需重新请求）
-   * - 记住当前播放进度 → 重拉流 load(startAtMs) → prepared 后自动 seek 回进度续播
-   * - 实际画质以接口返回值为准（未登录/非大会员请求高画质会被静默降级）
+   * 把取流结果落到播放器：同步画质列表/当前画质，并组装播放源。
+   * 目标画质需要 DASH 时 info.audioUrl 非空，播放器会起「视频轨 + 音频轨」双路
+   * （B 站 720P 以上画质只有 DASH，单文件 MP4 已下线），并注册兜底地址提供者。
+   */
+  private async applyPlayUrl(info: PlayUrlInfo, startAtMs: number): Promise<void> {
+    this.playUrlInfo = info;
+    // 画质列表/当前画质同步给 Player（控制栏画质按钮数据源）
+    this.playerVM.qualityOptions = info.qualityOptions;
+    this.playerVM.currentQuality = info.quality;
+    const src = new PlaySource();
+    src.url = info.url;
+    src.headers = Player.defaultHeaders();
+    src.audioUrl = info.audioUrl;
+    src.audioBackupUrls = info.audioBackupUrls;
+    // DASH 双流失败时惰性取单文件地址（多打一次接口只发生在真的播不了时）
+    src.fallbackProvider = (): Promise<string> => this.fetchFallbackUrl();
+    await this.playerVM.load(src, startAtMs);
+  }
+
+  /** 兜底地址：单文件最高档（≤720P，含音轨） */
+  private async fetchFallbackUrl(): Promise<string> {
+    if (this.detail === null) {
+      return '';
+    }
+    const r = await this.repo.getSingleFilePlayUrl(this.detail.bvid, this.detail.cid);
+    return r.isOk ? r.value.url : '';
+  }
+
+  /**
+   * 切换画质。
+   *
+   * 取流与档位折算统一由 PlayUrlInfo/QualityUtil 处理（对齐 PiliPlus updatePlayer）：
+   * - 重新请求（B 站不同 qn 对应不同地址，DASH 亦需按目标档位换视频轨）
+   * - 记住当前播放进度 → 换源 → prepared 后自动 seek 回进度续播
+   * - 实际画质以接口返回为准；被服务端降级（非大会员/该视频无该档位）时提示用户，
+   *   避免出现「选了 1080P 却悄悄播 720P」的困惑
    * - 持久化到 Pref.defaultQuality，下次打开视频生效
    */
   async changeQuality(qn: number): Promise<void> {
@@ -337,17 +368,22 @@ export class VideoDetailVM {
         this.playError = r.error.message;
         return;
       }
-      this.playUrlInfo = r.value;
-      this.playerVM.qualityOptions = this.playUrlInfo.qualityOptions;
-      this.playerVM.currentQuality = this.playUrlInfo.quality;
-      // 起播位置 = 切换前进度（prepared 后自动 seek）
-      await this.playerVM.load(this.playUrlInfo.url, Player.defaultHeaders(), resumeMs);
+      await this.applyPlayUrl(r.value, resumeMs);
       // 倍速重放（换流后内核倍速重置为 1.0）
       if (this.playerVM.speed !== 1) {
         await this.playerVM.setSpeed(this.playerVM.speed);
       }
       // 持久化画质偏好（下次打开视频/新视频生效）
       Pref.defaultQuality.put(qn);
+      if (r.value.quality !== qn) {
+        // 非大会员或该视频不提供该档位：服务端就近降级，明确告知
+        promptAction.showToast({
+          message: $r('app.string.quality_unavailable_toast',
+            QualityUtil.shortDesc(qn), QualityUtil.shortDesc(r.value.quality))
+        });
+      }
+      hilog.info(0x0000, TAG, 'changeQuality request=%{public}d actual=%{public}d dash=%{public}s',
+        qn, r.value.quality, `${r.value.isDash}`);
     } finally {
       this.playerVM.qualityChanging = false;
       this.qualityChanging = false;
@@ -374,3 +410,6 @@ export class VideoDetailVM {
     await PlayerRepository.remove(this.playerKey);
   }
 }
+
+// 日志 TAG（规范：统一定义在文件最下方）
+const TAG = VideoDetailVM.name ?? 'VideoDetailVM';

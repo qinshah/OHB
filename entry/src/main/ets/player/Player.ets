@@ -3,7 +3,7 @@ import { window } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { IPlayerEngine } from './IPlayerEngine';
 import { AvPlayerEngine } from './AvPlayerEngine';
-import { PlaybackState } from './PlayerTypes';
+import { PlaybackState, PlaySource } from './PlayerTypes';
 import { Logger } from '../common/utils/Logger';
 import { AppConstants } from '../common/constants/AppConstants';
 import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
@@ -247,10 +247,11 @@ export class Player {
 
   /**
    * 加载并播放。
+   * @param source 播放源（单文件或 DASH 双流，见 PlaySource）
    * @param startAtMs 起播位置（画质切换/续播时传入：prepared 后自动 seek 到该进度再播，
    *                  复用 pendingSeekMs 机制；0 表示从头播放）
    */
-  async load(url: string, headers: Record<string, string>, startAtMs: number = 0): Promise<void> {
+  async load(source: PlaySource, startAtMs: number = 0): Promise<void> {
     this.errorMessage = '';
     this.isCompleted = false;
     this.pendingSeekMs = Math.max(0, startAtMs);
@@ -258,7 +259,7 @@ export class Player {
     this.aspectRatio = 0;
     this.videoWidth = 0;
     this.videoHeight = 0;
-    await this.engine.setSource(url, headers);
+    await this.engine.setSource(source);
   }
 
   togglePlay(): void {

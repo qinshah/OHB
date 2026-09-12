@@ -3,7 +3,7 @@ import { DanmakuMessage } from '../models/LiveModels';
 import { LiveRoomViewModel } from '../viewmodel/LiveRoomViewModel';
 import { Player } from '../player/Player';
 import { PlayerRepository } from '../repository/PlayerRepository';
-import { PlaybackState } from '../player/PlayerTypes';
+import { PlaybackState, PlaySource } from '../player/PlayerTypes';
 import { AppColors } from '../theme/AppTheme';
 
 /**
@@ -34,8 +34,13 @@ export struct LiveRoomPage {
     this.cntlr.attachUIContext(this.getUIContext());
     this.vm.init(this.roomId);
     this.vm.load().then(() => {
-      if (this.vm.playInfo !== null) {
-        this.cntlr.load(this.vm.playInfo.playUrl, Player.defaultHeaders());
+      const info = this.vm.playInfo;
+      if (info !== null) {
+        // 直播流为单文件（FLV/HLS），组装 PlaySource 交给统一控制器
+        const src = new PlaySource();
+        src.url = info.playUrl;
+        src.headers = Player.defaultHeaders();
+        this.cntlr.load(src);
       }
     });
     this.startUiTimer();

@@ -1,4 +1,4 @@
-import { PlaybackState } from './PlayerTypes';
+import { PlaybackState, PlaySource } from './PlayerTypes';
 
 /**
  * 播放器内核抽象（AP-3）
@@ -6,8 +6,11 @@ import { PlaybackState } from './PlayerTypes';
  * UI 层对内核切换无感（AC-A-1）。
  */
 export interface IPlayerEngine {
-  /** 准备播放源。surfaceId 未就绪时可先调用，待 setSurface 后再 prepare */
-  setSource(url: string, headers: Record<string, string>): Promise<void>;
+  /**
+   * 准备播放源。surfaceId 未就绪时可先调用，待 setSurface 后再 prepare。
+   * source 同时承载「单文件」与「DASH 双流」两种形态（见 PlaySource）。
+   */
+  setSource(source: PlaySource): Promise<void>;
   /** 绑定渲染 surface */
   setSurface(surfaceId: string): void;
   play(): Promise<void>;
