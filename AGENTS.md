@@ -92,7 +92,7 @@
 
 * 统一直接使用系统 `hilog`（`@kit.PerformanceAnalysisKit`）打印日志，**禁止**封装 hilog，也**禁止**使用已封装的 [Logger.ets](entry/src/main/ets/common/utils/Logger.ets)。
 
-* 每个使用日志的文件，TAG 统一定义在**文件最下方**：`const TAG = XXX.name ?? 'XXX'`（`XXX` 为当前文件的主类/组件名）。
+* 每个使用日志的文件，TAG 统一定义在**文件最下方**：`const TAG = XXX.name`（`XXX` 为当前文件的主类/组件名）。
 
 * 示例：
 
@@ -107,7 +107,7 @@
   }
 
   // TAG 固定写在文件最下方
-  const TAG = XxxPage.name ?? 'XxxPage';
+  const TAG = XxxPage.name;
   ```
 
 ## 6. 参考项目 PiliPlus
