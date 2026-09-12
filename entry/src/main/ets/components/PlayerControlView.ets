@@ -8,6 +8,7 @@ import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
 import { Pref } from '../services/storage/Pref';
 import { DanmakuSettingsDialog } from './DanmakuSettingsPanel';
 import { QualityOption } from '../models/PlayUrlInfo';
+import { QualityUtil } from '../models/Quality';
 
 /** 手势类型：垂直=左亮度/右音量，水平=进度拖拽 */
 enum PlayerGestureType {
@@ -546,13 +547,14 @@ export struct PlayerControlView {
         return o.shortDesc.length > 0 ? o.shortDesc : o.desc;
       }
     }
-    return `${this.currentQuality}`;
+    return QualityUtil.shortDesc(this.currentQuality);
   }
 
-  /** 构建 Select 选项列表（显示画质完整名称，如「1080P 高清」） */
+  /** 构建 Select 选项列表（显示画质完整名称，如「1080P 高清」；大会员/高码率档位带角标） */
   private qualitySelectOptions(): SelectOption[] {
     return this.qualityOptions.map((o: QualityOption): SelectOption => {
-      const opt: SelectOption = { value: o.desc };
+      const suffix = o.superscript.length > 0 ? ` · ${o.superscript}` : (o.vip ? ' · 大会员' : '');
+      const opt: SelectOption = { value: `${o.desc}${suffix}` };
       return opt;
     });
   }

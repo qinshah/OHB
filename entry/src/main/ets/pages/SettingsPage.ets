@@ -9,18 +9,16 @@ import { Pref } from '../services/storage/Pref';
 import { Result } from '../common/result/Result';
 import { AppError } from '../common/result/AppError';
 import { ContextUtil } from '../common/utils/ContextUtil';
+import { QualityMeta, QualityUtil } from '../models/Quality';
 
-/** 清晰度选项 */
-const QUALITY_OPTIONS: QualityOption[] = [
-  { label: '8K (127)', value: 127 },
-  { label: '4K (120)', value: 120 },
-  { label: '1080P60 (116)', value: 116 },
-  { label: '1080P+ (112)', value: 112 },
-  { label: '1080P (80)', value: 80 },
-  { label: '720P (64)', value: 64 },
-  { label: '480P (32)', value: 32 },
-  { label: '360P (16)', value: 16 }
-];
+/**
+ * 清晰度选项：由统一画质枚举生成（不再本地硬编码 qn 魔数）
+ * 顺序与 QualityUtil.all 一致（高 → 低）
+ */
+const QUALITY_OPTIONS: QualityOption[] = QualityUtil.all.map((meta: QualityMeta): QualityOption => {
+  const opt: QualityOption = { label: `${meta.shortDesc} (${meta.code})`, value: meta.code };
+  return opt;
+});
 
 /** 倍速选项 */
 const SPEED_OPTIONS: SpeedOption[] = [

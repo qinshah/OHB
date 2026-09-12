@@ -5,6 +5,7 @@ import { Logger } from '../../common/utils/Logger';
 import { Callback } from '@kit.BasicServicesKit';
 import { ContextUtil } from '../../common/utils/ContextUtil';
 import ConfigurationConstant from '@ohos.app.ability.ConfigurationConstant';
+import { Quality, QualityMeta, QualityUtil } from '../../models/Quality';
 
 const prefRegistry: PrefItem<preferences.ValueType>[] = [];
 const PREFS_NAME = 'user_prefs'
@@ -25,7 +26,8 @@ export async function initP() {
 }
 
 export interface EnumEntry<T> {
-  readonly label: string;
+  /** 展示文案：支持 $r 资源引用（AGENTS.md：用户可见文案优先资源化） */
+  readonly label: ResourceStr;
   readonly value: T;
 }
 
@@ -133,15 +135,29 @@ export class Pref {
     return prefRegistry;
   }
 
+  /**
+   * 从画质枚举生成 entries（清晰度设置项数据源）。
+   * 顺序与 QualityUtil.all 一致（高 → 低），文案取自画质资源的完整描述。
+   */
+  static qualityEntries(): EnumEntry<number>[] {
+    const list: EnumEntry<number>[] = [];
+    for (let i = 0; i < QualityUtil.all.length; i++) {
+      const meta: QualityMeta = QualityUtil.all[i];
+      list.push({ label: meta.desc, value: meta.code });
+    }
+    return list;
+  }
+
   // ---------- 设置项定义（static PrefItem 实例） ----------
 
-  /** 播放：默认清晰度（qn） */
+  /** 播放：默认清晰度（qn，取值来自统一画质枚举 Quality） */
   static readonly defaultQuality: PrefItem<number> = new PrefItem<number>({
     key: 'defaultQuality',
-    def: 80,
+    def: Quality.High1080,
     onChange: TODO,
-    title: '默认清晰度',
-    desc: '播放的默认清晰度'
+    entries: Pref.qualityEntries(),
+    title: $r('app.string.pref_default_quality_title') as ResourceStr,
+    desc: $r('app.string.pref_default_quality_desc') as ResourceStr
   });
   /** 播放：默认倍速 */
   static readonly defaultSpeed: PrefItem<number> = new PrefItem<number>({

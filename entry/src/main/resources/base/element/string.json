@@ -255,6 +255,78 @@
     {
       "name": "video_parts",
       "value": "Parts (%d)"
+    },
+    {
+      "name": "quality_240p",
+      "value": "240P"
+    },
+    {
+      "name": "quality_360p",
+      "value": "360P"
+    },
+    {
+      "name": "quality_480p",
+      "value": "480P"
+    },
+    {
+      "name": "quality_720p",
+      "value": "720P"
+    },
+    {
+      "name": "quality_720p60",
+      "value": "720P 60fps"
+    },
+    {
+      "name": "quality_1080p",
+      "value": "1080P"
+    },
+    {
+      "name": "quality_1080p_plus",
+      "value": "1080P High Bitrate"
+    },
+    {
+      "name": "quality_1080p60",
+      "value": "1080P 60fps"
+    },
+    {
+      "name": "quality_4k",
+      "value": "4K Ultra HD"
+    },
+    {
+      "name": "quality_hdr",
+      "value": "HDR"
+    },
+    {
+      "name": "quality_dolby_vision",
+      "value": "Dolby Vision"
+    },
+    {
+      "name": "quality_8k",
+      "value": "8K Ultra HD"
+    },
+    {
+      "name": "quality_hdr_vivid",
+      "value": "HDR Vivid"
+    },
+    {
+      "name": "pref_default_quality_title",
+      "value": "Default quality"
+    },
+    {
+      "name": "pref_default_quality_desc",
+      "value": "Quality used when playback starts"
+    },
+    {
+      "name": "quality_vip_badge",
+      "value": "VIP"
+    },
+    {
+      "name": "quality_switched_toast",
+      "value": "Switched to %s"
+    },
+    {
+      "name": "quality_unavailable_toast",
+      "value": "%s is unavailable, switched to %s"
     }
   ]
 }

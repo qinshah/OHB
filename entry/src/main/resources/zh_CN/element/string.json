@@ -255,6 +255,78 @@
     {
       "name": "video_parts",
       "value": "分P（%d）"
+    },
+    {
+      "name": "quality_240p",
+      "value": "240P 极速"
+    },
+    {
+      "name": "quality_360p",
+      "value": "360P 流畅"
+    },
+    {
+      "name": "quality_480p",
+      "value": "480P 标清"
+    },
+    {
+      "name": "quality_720p",
+      "value": "720P 准高清"
+    },
+    {
+      "name": "quality_720p60",
+      "value": "720P 60帧"
+    },
+    {
+      "name": "quality_1080p",
+      "value": "1080P 高清"
+    },
+    {
+      "name": "quality_1080p_plus",
+      "value": "1080P 高码率"
+    },
+    {
+      "name": "quality_1080p60",
+      "value": "1080P 60帧"
+    },
+    {
+      "name": "quality_4k",
+      "value": "4K 超高清"
+    },
+    {
+      "name": "quality_hdr",
+      "value": "HDR 真彩"
+    },
+    {
+      "name": "quality_dolby_vision",
+      "value": "杜比视界"
+    },
+    {
+      "name": "quality_8k",
+      "value": "8K 超高清"
+    },
+    {
+      "name": "quality_hdr_vivid",
+      "value": "HDR Vivid"
+    },
+    {
+      "name": "pref_default_quality_title",
+      "value": "默认清晰度"
+    },
+    {
+      "name": "pref_default_quality_desc",
+      "value": "播放视频时使用的清晰度"
+    },
+    {
+      "name": "quality_vip_badge",
+      "value": "大会员"
+    },
+    {
+      "name": "quality_switched_toast",
+      "value": "已切换%s"
+    },
+    {
+      "name": "quality_unavailable_toast",
+      "value": "当前账号或该视频不支持%s，已切换为%s"
     }
   ]
 }
