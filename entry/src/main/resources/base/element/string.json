@@ -243,6 +243,18 @@
     {
       "name": "bangumi_detail_play",
       "value": "Play"
+    },
+    {
+      "name": "video_episodes",
+      "value": "Episodes (%d)"
+    },
+    {
+      "name": "bangumi_no_episode",
+      "value": "No playable episodes"
+    },
+    {
+      "name": "video_parts",
+      "value": "Parts (%d)"
     }
   ]
 }

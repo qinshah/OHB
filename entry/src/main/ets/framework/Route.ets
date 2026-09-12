@@ -26,7 +26,8 @@ import {
   FavoriteDetailParam,
   LiveRoomParam,
   TopicFeedParam,
-  UserSpaceParam
+  UserSpaceParam,
+  VideoParam
 } from '../pages/RouteParams';
 
 let routeMap: Map<string, WrappedBuilder<Object[]>> = new Map()
@@ -112,9 +113,21 @@ export class Route {
   static readonly settings: RoutePage = new RoutePage(SettingsPage.name, wrapBuilder(settingsPageBuilder))
 }
 
+/**
+ * 视频页路由参数有两种形态：
+ * - 字符串 bvid（普通视频，历史调用方式）
+ * - VideoParam 对象（番剧分集：附带 seasonId，视频页据此加载整季选集）
+ */
 @Builder
 function videoPageBuilder(param: Object) {
-  VideoPage({ bvid: param as string })
+  if (typeof param === 'string') {
+    VideoPage({ bvid: param })
+  } else {
+    VideoPage({
+      bvid: (param as VideoParam).bvid,
+      seasonId: (param as VideoParam).seasonId ?? 0
+    })
+  }
 }
 
 @Builder

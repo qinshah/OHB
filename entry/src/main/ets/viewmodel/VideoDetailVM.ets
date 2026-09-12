@@ -4,6 +4,8 @@ import { VideoDetail, VideoPage } from '../models/VideoDetail';
 import { PlayUrlInfo } from '../models/PlayUrlInfo';
 import { VideoCard } from '../models/VideoCard';
 import { VideoRepository } from '../data/repository/VideoRepository';
+import { BangumiRepository } from '../data/repository/BangumiRepository';
+import { BangumiEpisode } from '../models/BangumiModels';
 import { Player } from '../player/Player';
 import { PlayerRepository } from '../repository/PlayerRepository';
 import { Pref } from '../services/storage/Pref';
@@ -25,6 +27,11 @@ export class VideoDetailVM {
   playUrlInfo: PlayUrlInfo | null = null;
   /** 播放地址加载错误 */
   playError: string = '';
+  /**
+   * 番剧分集模式：detail.pages 来自整季剧集（每集自带 bvid），
+   * 选集列表按「集数」渲染而非「分P」（见 loadPgcEpisodes）。
+   */
+  isPgc: boolean = false;
   /** 相关视频（P2 Task 13） */
   relatedState: DataState<VideoCard[]> = DataState.idle<VideoCard[]>();
   related: VideoCard[] = [];
@@ -38,6 +45,9 @@ export class VideoDetailVM {
   playerVM: Player;
   private playerKey: string;
   private repo: VideoRepository = new VideoRepository();
+  private bangumiRepo: BangumiRepository = new BangumiRepository();
+  /** 番剧季号（>0 表示番剧分集模式） */
+  private seasonId: number = 0;
   /** 占位播放器 id 自增序号，避免多实例碰撞 */
   private static vmSeq: number = 0;
   /** 防竞态序号 */
@@ -119,21 +129,69 @@ export class VideoDetailVM {
       : DataState.empty<VideoCard[]>();
   }
 
-  /** 分P切换（P2 Task 13） */
+  /** 分P切换（P2 Task 13）／番剧切集 */
   async switchPage(page: VideoPage, index: number): Promise<void> {
     if (this.detail === null || this.actionBusy) {
       return;
     }
     this.actionBusy = true;
     this.actionTip = '';
-    const pos = this.playerVM.positionMs;
+    // 番剧每一集都是独立稿件：切集必须连带更换 bvid，否则会取到上一集的流
+    if (page.bvid.length > 0) {
+      this.detail.bvid = page.bvid;
+    }
     this.detail.cid = page.cid;
     await this.loadPlayUrl(this.loadSeq, this.detail.bvid, this.detail.cid);
-    if (pos > 0 && this.playUrlInfo !== null) {
-      // 新分P从 0 开始播放（不沿用旧进度）
-      this.playerVM.seekTo(0);
-    }
+    // 新分P / 新剧集从 0 开始播放（不沿用旧进度）
+    this.playerVM.seekTo(0);
     this.actionBusy = false;
+  }
+
+  /**
+   * 番剧分集：按季拉取整季剧集，写入 detail.pages 作为选集列表。
+   *
+   * 与普通分P的差异：
+   * - 普通分P同属一个稿件（bvid 不变、仅 cid 变化）
+   * - 番剧每集是独立稿件（bvid 与 cid 都要变），故 pages 逐集携带 bvid
+   * - 接口 duration 为毫秒，这里换算为秒以对齐 FormatUtils.duration
+   * 失败时静默返回：选集加载不影响当前剧集播放。
+   */
+  async loadPgcEpisodes(seasonId: number): Promise<void> {
+    if (seasonId <= 0) {
+      return;
+    }
+    this.seasonId = seasonId;
+    const r = await this.bangumiRepo.getDetail(seasonId);
+    if (!r.isOk || this.detail === null) {
+      return;
+    }
+    const eps = r.value.episodes;
+    const pages: VideoPage[] = [];
+    for (let i = 0; i < eps.length; i++) {
+      const ep: BangumiEpisode = eps[i];
+      if (ep.bvid.length === 0 || ep.cid <= 0) {
+        continue;
+      }
+      const p = new VideoPage();
+      p.cid = ep.cid;
+      p.bvid = ep.bvid;
+      p.page = pages.length + 1;
+      p.part = ep.longTitle.length > 0 ? ep.longTitle : ep.title;
+      p.duration = Math.floor(ep.duration / 1000);
+      pages.push(p);
+    }
+    if (pages.length === 0) {
+      return;
+    }
+    this.isPgc = true;
+    this.detail.pages = pages;
+    // 对齐当前正在播放的一集（入口非首集时也能正确高亮）
+    for (let i = 0; i < pages.length; i++) {
+      if (pages[i].cid === this.detail.cid) {
+        this.detail.bvid = pages[i].bvid;
+        break;
+      }
+    }
   }
 
   // ---------- P2 Task 13：互动 ----------

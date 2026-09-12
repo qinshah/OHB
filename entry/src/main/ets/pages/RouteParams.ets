@@ -26,3 +26,14 @@ export interface TopicFeedParam {
 export interface BangumiDetailParam {
   seasonId: number;
 }
+
+/**
+ * 视频页参数。
+ * - 普通视频：路由参数直接传 bvid 字符串（历史调用方式，保持兼容）
+ * - 番剧分集：传本对象，附带 seasonId，视频页据此加载整季剧集作为选集列表
+ */
+export interface VideoParam {
+  bvid: string;
+  /** 番剧季号（>0 表示番剧分集模式） */
+  seasonId?: number;
+}

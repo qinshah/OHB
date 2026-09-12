@@ -21,6 +21,11 @@ export class BangumiItem {
   subTitle: string = '';
   /** 热度文案（索引接口 order，如 "1782.2万追番"） */
   order: string = '';
+  /**
+   * 首集 ep_id（索引接口 first_ep.ep_id）。
+   * 卡片点击直达播放时用它定位入口剧集；0 表示接口未给（回退季内第 1 集）。
+   */
+  firstEpId: number = 0;
 }
 
 /** 剧集 */

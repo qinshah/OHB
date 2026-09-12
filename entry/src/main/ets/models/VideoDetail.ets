@@ -4,6 +4,11 @@ export class VideoPage {
   part: string = '';
   page: number = 1;
   duration: number = 0;
+  /**
+   * 番剧分集：该集自己的 bvid（普通视频分P为空串，沿用视频本身的 bvid）。
+   * 番剧每一集都是独立稿件，切集时必须连带更换 bvid 重新取流。
+   */
+  bvid: string = '';
 }
 
 export class VideoDetail {

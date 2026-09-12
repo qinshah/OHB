@@ -1,11 +1,13 @@
 import { DataStatus } from '../common/state/DataState';
 import { Route } from '../framework/Route';
-import { BangumiConditionValue, BangumiItem } from '../models/BangumiModels';
+import { BangumiConditionValue, BangumiEpisode, BangumiItem } from '../models/BangumiModels';
 import { BangumiFilterRow, BangumiViewModel } from '../viewmodel/BangumiViewModel';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
-import { BangumiDetailParam } from './RouteParams';
+import { BangumiDetailParam, VideoParam } from './RouteParams';
+import { BangumiRepository } from '../data/repository/BangumiRepository';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { promptAction } from '@kit.ArkUI';
 
 /** 卡片封面宽高比（3:4，对齐截图与 PiliPlus） */
 const COVER_ASPECT: number = 0.75;
@@ -22,6 +24,27 @@ const OVERLAY_CLEAR: string = '#00000000';
 const OVERLAY_DARK: string = '#B3000000';
 
 /**
+ * 选入口剧集：优先索引接口给的 first_ep.ep_id（即 B 站 `ss` 链接的默认入口），
+ * 缺失时回退季内第 1 集。只挑可播放的剧集（bvid 非空且 cid 有效）。
+ */
+function pickEntryEpisode(eps: BangumiEpisode[], firstEpId: number): BangumiEpisode | null {
+  let fallback: BangumiEpisode | null = null;
+  for (let i = 0; i < eps.length; i++) {
+    const ep: BangumiEpisode = eps[i];
+    if (ep.bvid.length === 0 || ep.cid <= 0) {
+      continue;
+    }
+    if (firstEpId > 0 && ep.epId === firstEpId) {
+      return ep;
+    }
+    if (fallback === null) {
+      fallback = ep;
+    }
+  }
+  return fallback;
+}
+
+/**
  * 番剧索引内容（首页「看番」tab / 独立索引页共用）。
  *
  * 版式参照截图：顶部筛选条件区（左「当前选中项」胶囊 + 右候选项横向滚动，
@@ -31,11 +54,50 @@ const OVERLAY_DARK: string = '#B3000000';
 @Component
 export struct BangumiIndexContent {
   @State vm: BangumiViewModel = new BangumiViewModel();
+  /** 正在解析入口剧集的季号（0 = 空闲；用于防连点 + 卡片按压反馈） */
+  @State openingSeasonId: number = 0;
   /** 滚动回调（转发给宿主页面，驱动搜索排收起/底部栏显隐） */
   onScrollAction?: (offset: number, state: ScrollState) => void;
+  private repo: BangumiRepository = new BangumiRepository();
 
   aboutToAppear(): void {
     this.vm.loadCondition();
+  }
+
+  /**
+   * 卡片点击 → 直接进视频页播放（不经过番剧详情页）。
+   *
+   * 索引接口只给 season_id 与 first_ep.ep_id，而视频页需要 bvid，
+   * 故先按季取一次详情解析出入口剧集，再带上 seasonId 跳转；
+   * 视频页会据此加载整季选集列表，复用其播放器/弹幕/全屏能力。
+   * 季详情同时访问同一接口，第二次命中缓存开销可忽略。
+   */
+  private async playFromCard(item: BangumiItem): Promise<void> {
+    if (this.openingSeasonId !== 0) {
+      return;
+    }
+    this.openingSeasonId = item.seasonId;
+    const r = await this.repo.getDetail(item.seasonId);
+    this.openingSeasonId = 0;
+    if (!r.isOk) {
+      hilog.error(0x0000, TAG, 'open bangumi failed: %{public}s', r.error.message);
+      promptAction.showToast({ message: r.error.message });
+      return;
+    }
+    const target = pickEntryEpisode(r.value.episodes, item.firstEpId);
+    if (target === null) {
+      hilog.error(0x0000, TAG, 'no playable episode, seasonId=%{public}d', item.seasonId);
+      promptAction.showToast({ message: $r('app.string.bangumi_no_episode') });
+      return;
+    }
+    const p: VideoParam = { bvid: target.bvid, seasonId: item.seasonId };
+    Route.push(Route.video, p);
+  }
+
+  /** 长按卡片 → 打开番剧详情（追番 / 简介 / 其他季） */
+  private openDetail(item: BangumiItem): void {
+    const p: BangumiDetailParam = { seasonId: item.seasonId };
+    Route.push(Route.bangumiDetail, p);
   }
 
   build() {
@@ -244,10 +306,15 @@ export struct BangumiIndexContent {
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
+    // 打开中降低透明度，给出按压反馈（网络往返期间不至于无响应感）
+    .opacity(this.openingSeasonId === item.seasonId ? 0.55 : 1)
     .onClick(() => {
-      const p: BangumiDetailParam = { seasonId: item.seasonId };
-      Route.push(Route.bangumiDetail, p);
+      this.playFromCard(item);
     })
+    // 长按进详情（SDK 的 CommonMethod 未提供 onLongPress，统一用 LongPressGesture）
+    .gesture(LongPressGesture().onAction(() => {
+      this.openDetail(item);
+    }))
   }
 
   /** 角标底色：接口未给 bg_color 时回退品牌色 */
@@ -441,4 +508,4 @@ export struct BangumiRankPage {
 }
 
 // 日志 TAG（规范：统一定义在文件最下方）
-const TAG = BangumiPage.name ?? 'BangumiPage';
+const TAG = BangumiIndexContent.name ?? 'BangumiIndexContent';

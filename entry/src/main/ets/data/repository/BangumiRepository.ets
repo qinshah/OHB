@@ -24,6 +24,12 @@ interface RawBadgeInfo {
   text?: string;
 }
 
+/** 索引条目的首集信息（first_ep） */
+interface RawFirstEp {
+  ep_id?: number;
+  cover?: string;
+}
+
 interface RawBangumiItem {
   season_id?: number;
   media_id?: number;
@@ -37,6 +43,8 @@ interface RawBangumiItem {
   badge?: string;
   badge_type?: number;
   badge_info?: RawBadgeInfo;
+  /** 首集信息（卡片点击直达播放时用于定位入口剧集） */
+  first_ep?: RawFirstEp;
 }
 
 interface RawRankData {
@@ -341,6 +349,7 @@ export class BangumiRepository {
     item.badgeColor = raw.badge_info?.bg_color ?? '';
     item.subTitle = raw.subTitle ?? '';
     item.order = raw.order ?? '';
+    item.firstEpId = raw.first_ep?.ep_id ?? 0;
     return item;
   }
 

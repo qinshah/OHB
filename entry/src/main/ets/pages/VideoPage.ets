@@ -25,6 +25,8 @@ import { VideoListTile } from '../common/components/VideoListTile';
 @Component
 export default struct VideoDetailPage {
   @Prop bvid: string = '';
+  /** 番剧季号（>0 表示番剧分集：由 Route.video 传入，用于加载整季选集） */
+  @Prop seasonId: number = 0;
   @State vm: VideoDetailVM = new VideoDetailVM();
   @State descExpanded: boolean = false;
   @State commentLoaded: boolean = false;
@@ -61,6 +63,10 @@ export default struct VideoDetailPage {
         const ctx = this.getUIContext().getHostContext();
         if (ctx !== undefined && this.vm.detail !== null) {
           this.vm.playerVM.attachMediaSession(ctx as common.Context, this.vm.detail.title, this.vm.detail.ownerName);
+        }
+        // 番剧分集：详情就绪后补拉整季剧集作为选集列表（失败不影响播放）
+        if (this.seasonId > 0) {
+          this.vm.loadPgcEpisodes(this.seasonId);
         }
       });
     }
@@ -301,17 +307,61 @@ export default struct VideoDetailPage {
       .width('100%')
       .alignItems(HorizontalAlign.Start)
 
-      // 分P列表
-      if (this.vm.detail!.pages.length > 1) {
+      // 选集（番剧）/ 分P（普通视频）
+      if (this.vm.isPgc && this.vm.detail!.pages.length > 0) {
+        this.EpisodeList()
+      } else if (this.vm.detail!.pages.length > 1) {
         this.PageList()
       }
     }
   }
 
+  /**
+   * 番剧选集：横向滚动的集数按钮（懒加载，长篇番剧可达数百集）。
+   * 当前集以品牌色高亮；点击切集由 VM 同时更换 bvid + cid 重新取流。
+   */
+  @Builder
+  EpisodeList() {
+    Column({ space: 6 }) {
+      Text($r('app.string.video_episodes', this.vm.detail!.pages.length))
+        .fontSize(14)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(AppColors.TEXT_PRIMARY)
+        .width('100%')
+      List({ space: 8 }) {
+        ForEach(this.vm.detail!.pages, (p: VideoPageItem, index: number) => {
+          ListItem() {
+            Row() {
+              Text(`${p.page}`)
+                .fontSize(13)
+                .fontColor(this.vm.detail!.cid === p.cid ? Color.White : AppColors.TEXT_PRIMARY)
+            }
+            .width(44)
+            .height(34)
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor(this.vm.detail!.cid === p.cid ? AppColors.BRAND : AppColors.CARD_BG)
+            .borderRadius(8)
+            .onClick(() => {
+              const d = this.vm.detail;
+              if (d !== null && d.cid !== p.cid) {
+                this.vm.switchPage(d.pages[index], index);
+              }
+            })
+          }
+        }, (p: VideoPageItem) => `${p.bvid}_${p.cid}`)
+      }
+      .listDirection(Axis.Horizontal)
+      .scrollBar(BarState.Off)
+      .width('100%')
+      .height(34)
+    }
+    .width('100%')
+  }
+
   @Builder
   PageList() {
     Column({ space: 6 }) {
-      Text(`分P（${this.vm.detail!.pages.length}）`)
+      Text($r('app.string.video_parts', this.vm.detail!.pages.length))
         .fontSize(14)
         .fontWeight(FontWeight.Medium)
         .fontColor(AppColors.TEXT_PRIMARY)
@@ -473,4 +523,6 @@ interface VideoPageItem {
   part: string;
   page: number;
   duration: number;
+  /** 番剧分集：该集独立 bvid（普通分P为空串） */
+  bvid: string;
 }

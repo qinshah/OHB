@@ -243,6 +243,18 @@
     {
       "name": "bangumi_detail_play",
       "value": "播放"
+    },
+    {
+      "name": "video_episodes",
+      "value": "选集（%d）"
+    },
+    {
+      "name": "bangumi_no_episode",
+      "value": "该番剧暂无可播放剧集"
+    },
+    {
+      "name": "video_parts",
+      "value": "分P（%d）"
     }
   ]
 }
