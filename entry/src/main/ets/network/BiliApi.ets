@@ -5,6 +5,7 @@ import { ChannelType, HttpClient } from './HttpClient';
 import { AppSigner } from './AppSigner';
 import { CookieManager } from './CookieManager';
 import { SearchType } from '../models/SearchModels';
+import { Quality, QualityUtil } from '../models/Quality';
 
 /**
  * Bilibili API 调用层（DataSource，Task 2/3 + P2 扩展）
@@ -55,17 +56,23 @@ export class BiliApi {
   }
 
   /**
-   * 播放地址（WBI 签名）
-   * V1 采用 fnval=1（muxed MP4 durl），保证 AVPlayer 可靠起播；
-   * DASH 多清晰度在 P1（Task 12）完善。
+   * 播放地址（WBI 签名）。
+   *
+   * fnval 决定响应形态（见 QualityUtil.FNVAL_*）：
+   * - FNVAL_MP4(1)：单文件 MP4 durl，含音轨、AVPlayer 直接可播，
+   *   但 B 站已下线 720P 以上档位（即使携带大会员 Cookie 也只会返回 720P）
+   * - FNVAL_DASH(4048)：DASH 视频轨/音频轨分离，携带大会员 Cookie 时
+   *   才会给出 1080P/1080P60/4K/HDR/8K 的完整档位
+   *
    * try_look=1：参考 PiliPlus，未登录也能查看高画质（否则 accept_quality 只有 64/16）
    */
-  playUrl(bvid: string, cid: number, qn: number = 80): Promise<Result<Object>> {
+  playUrl(bvid: string, cid: number, qn: number = Quality.High1080,
+    fnval: number = QualityUtil.FNVAL_MP4): Promise<Result<Object>> {
     return this.http.get(ApiConstants.PLAY_URL, {
       'bvid': bvid,
       'cid': cid,
       'qn': qn,
-      'fnval': 1,
+      'fnval': fnval,
       'fnver': 0,
       'fourk': 1,
       'platform': 'pc',
@@ -76,34 +83,20 @@ export class BiliApi {
   }
 
   /**
-   * 画质列表探测（WBI 签名）：fnval=16 DASH 模式 + try_look。
-   * 仅用于获取完整 accept_quality/support_formats（try_look 只对 DASH 请求生效，
-   * 参考 PiliPlus tryLook 条件：未登录时借 DASH 接口拿到含 1080P 的试看列表）；
-   * 返回的 dash 流本项目 AVPlayer 不消费，播放地址仍走 fnval=1 的 playUrl。
+   * 番剧播放地址（P2 Task 20）。
+   * fnval 语义同 playUrl；番剧响应载荷在 result.video_info 下。
    */
-  playUrlFormats(bvid: string, cid: number): Promise<Result<Object>> {
-    return this.http.get(ApiConstants.PLAY_URL, {
-      'bvid': bvid,
-      'cid': cid,
-      'qn': 80,
-      'fnval': 16,
-      'fnver': 0,
-      'fourk': 1,
-      'platform': 'pc',
-      'try_look': 1,
-      'web_location': 1315873
-    }, ChannelType.Web);
-  }
-
-  /** 番剧播放地址（P2 Task 20） */
-  pgcPlayUrl(bvid: string, cid: number, qn: number = 80): Promise<Result<Object>> {
+  pgcPlayUrl(bvid: string, cid: number, qn: number = Quality.High1080,
+    fnval: number = QualityUtil.FNVAL_MP4): Promise<Result<Object>> {
     return this.http.get(ApiConstants.PGC_PLAY_URL, {
       'bvid': bvid,
       'cid': cid,
       'qn': qn,
-      'fnval': 1,
+      'fnval': fnval,
+      'fnver': 0,
       'fourk': 1,
-      'platform': 'pc'
+      'platform': 'pc',
+      'try_look': 1
     }, ChannelType.Raw);
   }
 

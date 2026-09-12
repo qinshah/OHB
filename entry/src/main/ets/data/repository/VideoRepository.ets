@@ -4,6 +4,8 @@ import { BiliApi } from '../../network/BiliApi';
 import { VideoCard } from '../../models/VideoCard';
 import { VideoDetail, VideoPage } from '../../models/VideoDetail';
 import { PlayUrlInfo, QualityOption } from '../../models/PlayUrlInfo';
+import { Quality, QualityUtil } from '../../models/Quality';
+import { PlayUrlParser, RawPlayData } from './PlayUrlParser';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { PrefsStorage } from '../../services/storage/PrefsStorage';
 import { AccountManager } from '../../services/account/AccountManager';
@@ -11,6 +13,7 @@ import { CookieManager } from '../../network/CookieManager';
 import { common } from '@kit.AbilityKit';
 
 // ---- 原始 JSON 形状 ----
+
 interface RawOwner {
   mid?: number;
   name?: string;
@@ -72,29 +75,6 @@ interface RawDetailData {
   owner?: RawOwner;
   stat?: RawStat;
   pages?: RawDetailPage[];
-}
-
-interface RawDurl {
-  url?: string;
-  backup_url?: string[];
-}
-
-/** support_formats 单项（playurl 响应，画质描述） */
-interface RawSupportFormat {
-  quality?: number;
-  new_desc?: string;
-  display_desc?: string;
-  superscript?: string;
-}
-
-interface RawPlayData {
-  quality?: number;
-  timelength?: number;
-  durl?: RawDurl[];
-  /** 可用画质 qn 列表（账号可见范围内，从高到低） */
-  accept_quality?: number[];
-  /** 画质描述（与 accept_quality 对应） */
-  support_formats?: RawSupportFormat[];
 }
 
 /** 推荐/热门/搜索共用解析 */
@@ -243,86 +223,84 @@ export class VideoRepository {
     return Result.ok<VideoDetail>(v);
   }
 
-  async getPlayUrl(bvid: string, cid: number, qn: number = 80): Promise<Result<PlayUrlInfo>> {
-    const r = await this.api.playUrl(bvid, cid, qn);
+  /**
+   * 取流（统一入口）。
+   *
+   * 流程（对齐 PiliPlus：始终以最高档做一次探测请求，再按账号真实可用档位选流）：
+   * 1. 先以 `QualityUtil.PROBE_QUALITY` + DASH(fnval=4048) 探测，
+   *    这样服务端才会返回账号真实的完整档位（未带 DASH 时大会员档位会被隐藏，
+   *    这正是此前「切 720P 以上画质总被回退到 720P」的根因）与 DASH 视频/音频轨
+   * 2. 用 `QualityUtil.findAvailable` 把「期望画质」折算为「实际可用画质」
+   * 3. 目标档位 ≤720P → 走单文件 MP4（含音轨，兼容性最好）
+   *    目标档位 >720P → B 站已下线对应 MP4，只能走 DASH 双流（视频轨 + 音频轨）
+   * 4. DASH 取不到对应流时回退到单文件最高档，保证可播
+   */
+  async getPlayUrl(bvid: string, cid: number, preferredQn: number = Quality.High1080): Promise<Result<PlayUrlInfo>> {
+    const probeR = await this.api.playUrl(bvid, cid, QualityUtil.PROBE_QUALITY, QualityUtil.FNVAL_DASH);
+    if (!probeR.isOk) {
+      return Result.err<PlayUrlInfo>(probeR.error);
+    }
+    const probe = probeR.value as RawPlayData;
+    const dashCodes = PlayUrlParser.dashVideoCodes(probe);
+    const options = PlayUrlParser.parseQualityOptions(probe, dashCodes);
+    if (options.length === 0) {
+      return Result.err<PlayUrlInfo>(AppError.parse('no quality options'));
+    }
+    // 期望画质 → 实际可播画质（accept_quality 会虚报，高画质必须以 DASH 实际流为准）
+    const target = PlayUrlParser.resolveTarget(probe, preferredQn);
+    hilog.info(0x0000, TAG, 'getPlayUrl preferred=%{public}d target=%{public}d declared=%{public}s dash=%{public}s',
+      preferredQn, target, `${PlayUrlParser.acceptCodes(probe)}`, `${dashCodes}`);
+
+    if (!QualityUtil.needsDash(target)) {
+      const single = await this.getSingleFilePlayUrl(bvid, cid, target);
+      if (single.isOk) {
+        single.value.qualityOptions = options;
+        this.logResult('single', single.value);
+        return single;
+      }
+      hilog.warn(0x0000, TAG, 'single-file url failed, fallback to dash: %{public}s', single.error.message);
+    }
+
+    const info = new PlayUrlInfo();
+    if (PlayUrlParser.fillDash(info, probe, target)) {
+      info.qualityOptions = options;
+      this.logResult('dash', info);
+      return Result.ok<PlayUrlInfo>(info);
+    }
+
+    // 该档位没有 DASH 流（或响应不含 dash）→ 退回单文件最高档
+    const fallbackQn = Math.min(target, QualityUtil.MAX_SINGLE_FILE);
+    const single = await this.getSingleFilePlayUrl(bvid, cid, fallbackQn);
+    if (!single.isOk) {
+      return single;
+    }
+    single.value.qualityOptions = options;
+    this.logResult('single-fallback', single.value);
+    return single;
+  }
+
+  /**
+   * 单文件（MP4/durl）取流：fnval=1，音视频同流，AvPlayer 单实例可播。
+   * 亦作为 DASH 双流播放失败时的兜底地址来源（见 PlaySource.fallbackProvider）。
+   */
+  async getSingleFilePlayUrl(bvid: string, cid: number,
+    qn: number = QualityUtil.MAX_SINGLE_FILE): Promise<Result<PlayUrlInfo>> {
+    const r = await this.api.playUrl(bvid, cid, qn, QualityUtil.FNVAL_MP4);
     if (!r.isOk) {
       return Result.err<PlayUrlInfo>(r.error);
     }
     const d = r.value as RawPlayData;
-    const durl = d.durl ?? [];
-    if (durl.length === 0 || durl[0].url === undefined) {
+    const info = new PlayUrlInfo();
+    if (!PlayUrlParser.fillSingleFile(info, d, qn)) {
       return Result.err<PlayUrlInfo>(AppError.parse('no playable url'));
     }
-    const info = new PlayUrlInfo();
-    info.url = VideoCard.fixUrl(durl[0].url);
-    info.backupUrls = (durl[0].backup_url ?? []).map((u: string) => VideoCard.fixUrl(u));
-    info.quality = d.quality ?? 0;
-    info.qualityDesc = VideoRepository.qualityName(info.quality);
-    info.timelength = d.timelength ?? 0;
-    info.qualityOptions = VideoRepository.parseQualityOptions(d);
-    // 未登录时 fnval=1 接口只返回 2 档画质（accept_quality=[64,16]），
-    // 借 DASH 请求（try_look 只对 DASH 生效）补全画质列表（含 1080P 试看）
-    if (info.qualityOptions.length <= 2) {
-      const f = await this.api.playUrlFormats(bvid, cid);
-      if (f.isOk) {
-        const fd = f.value as RawPlayData;
-        const dashOptions = VideoRepository.parseQualityOptions(fd);
-        if (dashOptions.length > info.qualityOptions.length) {
-          hilog.info(0x0000, TAG,
-            'quality list from dash: %{public}d items (durl only %{public}d)',
-            dashOptions.length, info.qualityOptions.length);
-          info.qualityOptions = dashOptions;
-        }
-      }
-    }
-    hilog.info(0x0000, TAG, 'getPlayUrl qn=%{public}d real=%{public}d options=%{public}s',
-      qn, info.quality, `${info.qualityOptions.map((o: QualityOption) => `${o.qn}:${o.desc}`)}`);
+    info.qualityOptions = PlayUrlParser.parseQualityOptions(d);
     return Result.ok<PlayUrlInfo>(info);
   }
 
-  /**
-   * 组装可用画质列表（参考 PiliPlus VideoQuality 使用方式）：
-   * - 以 accept_quality（账号可见范围内的 qn 列表）为准，从 support_formats 取
-   *   new_desc（列表项完整描述）/ display_desc（按钮短文案）/ superscript（大会员角标）
-   * - 描述兜底链：new_desc → display_desc → qualityName 本地映射
-   *   （实测未登录时 support_formats 的 new_desc 为空串、display_desc 才有值如「720P」）
-   */
-  private static parseQualityOptions(d: RawPlayData): QualityOption[] {
-    const qns: number[] = d.accept_quality ?? [];
-    if (qns.length === 0) {
-      return [];
-    }
-    const formats: RawSupportFormat[] = d.support_formats ?? [];
-    const list: QualityOption[] = [];
-    for (const q of qns) {
-      const o = new QualityOption();
-      o.qn = q;
-      let matched: RawSupportFormat | null = null;
-      for (const f of formats) {
-        if (f.quality === q) {
-          matched = f;
-          break;
-        }
-      }
-      if (matched !== null) {
-        o.desc = matched.new_desc ?? '';
-        o.shortDesc = matched.display_desc ?? '';
-        o.superscript = matched.superscript ?? '';
-      } else {
-        // 兜底：qn 映射本地文案
-        o.desc = VideoRepository.qualityName(q);
-        o.shortDesc = o.desc;
-      }
-      // desc 兜底链：new_desc 空 → display_desc → qualityName
-      if (o.desc.length === 0) {
-        o.desc = o.shortDesc.length > 0 ? o.shortDesc : VideoRepository.qualityName(q);
-      }
-      if (o.shortDesc.length === 0) {
-        o.shortDesc = VideoRepository.qualityName(q);
-      }
-      list.push(o);
-    }
-    return list;
+  private logResult(mode: string, info: PlayUrlInfo): void {
+    hilog.info(0x0000, TAG, 'getPlayUrl ok mode=%{public}s qn=%{public}d dash=%{public}s options=%{public}s',
+      mode, info.quality, `${info.isDash}`, `${info.qualityOptions.map((o: QualityOption) => `${o.qn}:${o.desc}`)}`);
   }
 
   // ---------- P2 Task 13：视频详情互动 ----------
@@ -399,18 +377,9 @@ export class VideoRepository {
     return Result.ok<boolean>(true);
   }
 
+  /** 短文案（画质名称映射已统一收敛到 QualityUtil.shortDesc） */
   static qualityName(qn: number): string {
-    switch (qn) {
-      case 127: return '8K';
-      case 120: return '4K';
-      case 116: return '1080P60';
-      case 112: return '1080P+';
-      case 80: return '1080P';
-      case 64: return '720P';
-      case 32: return '480P';
-      case 16: return '360P';
-      default: return `${qn}P`;
-    }
+    return QualityUtil.shortDesc(qn);
   }
 }
 

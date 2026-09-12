@@ -14,6 +14,9 @@ import {
 } from '../../models/BangumiModels';
 import { PlayUrlInfo } from '../../models/PlayUrlInfo';
 import { VideoCard } from '../../models/VideoCard';
+import { Quality, QualityUtil } from '../../models/Quality';
+import { PlayUrlParser, RawPlayData } from './PlayUrlParser';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 /** 每页条数（3 列网格 × 7 行，对齐 PiliPlus pagesize=21） */
 export const BANGUMI_INDEX_PAGE_SIZE: number = 21;
@@ -145,29 +148,14 @@ interface RawIndexData {
   has_next?: number;
 }
 
-interface RawPlayDurl {
-  url?: string;
-  backup_url?: string[];
-  /** 片长（毫秒） */
-  length?: number;
-}
-
-/** /pgc/player/web/v2/playurl 的 result.video_info */
-interface RawPlayVideoInfo {
-  quality?: number;
-  timelength?: number;
-  durl?: RawPlayDurl[];
-  durls?: RawPlayDurl[];
-}
-
-/** /pgc/player/web/v2/playurl 的 result（兼容旧版平铺结构） */
-interface RawPlayResult {
-  /** v2：视频信息在 result.video_info */
-  video_info?: RawPlayVideoInfo;
-  /** v1（旧）：durl/quality 直接平铺在 result 下 */
-  durl?: RawPlayDurl[];
-  quality?: number;
-  timelength?: number;
+/**
+ * /pgc/player/web/v2/playurl 的 result。
+ * v2 的 video_info 与 UGC 的 data 结构同构（quality/durl/dash/accept_quality/support_formats），
+ * 因此直接复用共享的 RawPlayData，保证两条取流链路的解析完全一致。
+ */
+interface RawPlayResult extends RawPlayData {
+  /** v2：视频信息在 result.video_info 下 */
+  video_info?: RawPlayData;
 }
 
 /**
@@ -304,36 +292,78 @@ export class BangumiRepository {
     return Result.ok<boolean>(true);
   }
 
-  /** 剧集播放地址（/pgc/player/web/v2/playurl，MP4 durl 通道，AvPlayer 可直接播） */
-  async getPlayUrl(bvid: string, cid: number, qn: number = 80): Promise<Result<PlayUrlInfo>> {
-    const r = await this.api.pgcPlayUrl(bvid, cid, qn);
+  /**
+   * 剧集播放地址（/pgc/player/web/v2/playurl）。
+   *
+   * 取流策略与 UGC 完全一致（共用 PlayUrlParser）：
+   * - 先以最高档 + DASH(fnval=4048) 探测，拿到大会员账号真实的完整档位与 DASH 流
+   * - 目标档位 ≤720P → 单文件 MP4（含音轨）
+   * - 目标档位 >720P → B 站已无对应 MP4，走 DASH 双流（视频轨 + 音频轨）
+   */
+  async getPlayUrl(bvid: string, cid: number,
+    preferredQn: number = Quality.High1080): Promise<Result<PlayUrlInfo>> {
+    const probeR = await this.api.pgcPlayUrl(bvid, cid, QualityUtil.PROBE_QUALITY, QualityUtil.FNVAL_DASH);
+    if (!probeR.isOk) {
+      return Result.err<PlayUrlInfo>(probeR.error);
+    }
+    const probe = BangumiRepository.payload(probeR.value as RawPlayResult);
+    const dashCodes = PlayUrlParser.dashVideoCodes(probe);
+    const options = PlayUrlParser.parseQualityOptions(probe, dashCodes);
+    // 期望画质 → 实际可播画质（accept_quality 会虚报，高画质必须以 DASH 实际流为准）
+    const target = PlayUrlParser.resolveTarget(probe, preferredQn);
+    hilog.info(0x0000, TAG, 'pgc getPlayUrl preferred=%{public}d target=%{public}d declared=%{public}s dash=%{public}s',
+      preferredQn, target, `${PlayUrlParser.acceptCodes(probe)}`, `${dashCodes}`);
+
+    if (!QualityUtil.needsDash(target)) {
+      const single = await this.getSingleFilePlayUrl(bvid, cid, target);
+      if (single.isOk) {
+        single.value.qualityOptions = options;
+        return single;
+      }
+      hilog.warn(0x0000, TAG, 'pgc single-file url failed, fallback to dash: %{public}s', single.error.message);
+    }
+
+    const info = new PlayUrlInfo();
+    if (PlayUrlParser.fillDash(info, probe, target)) {
+      info.qualityOptions = options;
+      return Result.ok<PlayUrlInfo>(info);
+    }
+
+    const fallbackQn = Math.min(target, QualityUtil.MAX_SINGLE_FILE);
+    const single = await this.getSingleFilePlayUrl(bvid, cid, fallbackQn);
+    if (!single.isOk) {
+      return single;
+    }
+    single.value.qualityOptions = options;
+    return single;
+  }
+
+  /**
+   * 单文件（MP4/durl）取流：fnval=1，音视频同流。
+   * 亦作为番剧 DASH 双流播放失败时的兜底地址来源。
+   */
+  async getSingleFilePlayUrl(bvid: string, cid: number,
+    qn: number = QualityUtil.MAX_SINGLE_FILE): Promise<Result<PlayUrlInfo>> {
+    const r = await this.api.pgcPlayUrl(bvid, cid, qn, QualityUtil.FNVAL_MP4);
     if (!r.isOk) {
       return Result.err<PlayUrlInfo>(r.error);
     }
-    const res = r.value as RawPlayResult;
-    // v2 结构：result.video_info.{durl,quality,timelength}；旧版结构直接平铺在 result 下
-    const video: RawPlayVideoInfo | undefined = res.video_info;
-    let durl: RawPlayDurl[] = [];
-    let quality = 0;
-    let timelength = 0;
-    if (video !== undefined && video !== null) {
-      durl = video.durl ?? video.durls ?? [];
-      quality = video.quality ?? 0;
-      timelength = video.timelength ?? 0;
-    } else {
-      durl = res.durl ?? [];
-      quality = res.quality ?? 0;
-      timelength = res.timelength ?? 0;
-    }
-    if (durl.length === 0 || durl[0].url === undefined) {
+    const d = BangumiRepository.payload(r.value as RawPlayResult);
+    const info = new PlayUrlInfo();
+    if (!PlayUrlParser.fillSingleFile(info, d, qn)) {
       return Result.err<PlayUrlInfo>(AppError.parse('no pgc playable url'));
     }
-    const info = new PlayUrlInfo();
-    info.url = VideoCard.fixUrl(durl[0].url);
-    info.backupUrls = (durl[0].backup_url ?? []).map((u: string) => VideoCard.fixUrl(u));
-    info.quality = quality;
-    info.timelength = timelength > 0 ? timelength : (durl[0].length ?? 0);
+    info.qualityOptions = PlayUrlParser.parseQualityOptions(d);
     return Result.ok<PlayUrlInfo>(info);
+  }
+
+  /** 归一化 playurl 载荷：v2 在 result.video_info，旧版平铺在 result 下 */
+  private static payload(res: RawPlayResult): RawPlayData {
+    const video = res.video_info;
+    if (video !== undefined && video !== null) {
+      return video;
+    }
+    return res;
   }
 
   private static parseItem(raw: RawBangumiItem): BangumiItem {
@@ -386,3 +416,6 @@ export class BangumiRepository {
     return item;
   }
 }
+
+// 日志 TAG（规范：统一定义在文件最下方）
+const TAG = BangumiRepository.name ?? 'BangumiRepository';
