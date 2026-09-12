@@ -94,7 +94,7 @@
     },
     {
       "name": "home_tab_bangumi",
-      "value": "番剧"
+      "value": "看番"
     },
     {
       "name": "home_tab_music",
@@ -183,6 +183,30 @@
     {
       "name": "home_no_recommend",
       "value": "没有推荐内容"
+    },
+    {
+      "name": "bangumi_index_title",
+      "value": "索引"
+    },
+    {
+      "name": "bangumi_rank_title",
+      "value": "排行榜"
+    },
+    {
+      "name": "bangumi_filter_more",
+      "value": "更多筛选"
+    },
+    {
+      "name": "bangumi_filter_less",
+      "value": "收起筛选"
+    },
+    {
+      "name": "bangumi_empty",
+      "value": "暂无内容"
+    },
+    {
+      "name": "bangumi_rank_empty",
+      "value": "暂无排行数据"
     }
   ]
 }

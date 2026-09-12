@@ -57,7 +57,7 @@ export struct ErrorView {
 /** 空视图 */
 @Component
 export struct EmptyView {
-  tip: string = '暂无内容';
+  tip: ResourceStr = '暂无内容';
 
   build() {
     Column({ space: 12 }) {

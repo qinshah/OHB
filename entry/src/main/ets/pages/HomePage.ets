@@ -7,7 +7,7 @@ import { EmptyView, ErrorView, LoadingView } from '../common/components/StateVie
 import { AppColors } from '../theme/AppTheme';
 import { IndexViewModel } from '../viewmodel/IndexViewModel';
 import { LiveTabContent } from './LivePage';
-import { BangumiTabContent } from './BangumiPage';
+import { BangumiIndexContent } from './BangumiPage';
 import { MusicTabContent } from './MusicPage';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
@@ -108,7 +108,7 @@ interface HomeTabItem {
  *
  * 布局参考 B 站原版首页：
  * - 顶部搜索排（点击跳搜索页）；下滑收起、上滑恢复（与底部导航栏显隐联动）
- * - 分区 tabs：直播 / 推荐 / 热门 / 番剧 / 音乐，支持左右滑动切换 + 点击切换，
+ * - 分区 tabs：直播 / 推荐 / 热门 / 看番 / 音乐，支持左右滑动切换 + 点击切换，
  *   各分区内容为独立 tab 页（非跳转新页面）
  * - tab 内容懒加载：首次切到该 tab 时才构建并请求数据
  */
@@ -249,10 +249,10 @@ export struct HomePage {
               })
             }
           }
-          // 番剧
+          // 看番
           TabContent() {
             if (this.loadedTabs[3]) {
-              BangumiTabContent({
+              BangumiIndexContent({
                 onScrollAction: (offset: number, state: ScrollState): void => {
                   this.forwardScroll(offset, state);
                 }

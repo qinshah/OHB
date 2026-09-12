@@ -16,7 +16,7 @@ import { DynamicDetailPage } from '../pages/DynamicDetailPage';
 import { PublishDynamicPage } from '../pages/PublishDynamicPage';
 import { TopicPage } from '../pages/TopicPage';
 import { TopicFeedPage } from '../pages/TopicFeedPage';
-import { BangumiPage } from '../pages/BangumiPage';
+import { BangumiPage, BangumiRankPage } from '../pages/BangumiPage';
 import { BangumiDetailPage } from '../pages/BangumiDetailPage';
 import { MusicPage } from '../pages/MusicPage';
 import { SettingsPage } from '../pages/SettingsPage';
@@ -195,6 +195,11 @@ function topicFeedPageBuilder(param: Object) {
 @Builder
 function bangumiPageBuilder(_param: Object) {
   BangumiPage()
+}
+
+@Builder
+function bangumiRankPageBuilder(_param: Object) {
+  BangumiRankPage()
 }
 
 @Builder

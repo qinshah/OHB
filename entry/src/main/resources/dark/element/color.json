@@ -27,6 +27,18 @@
     {
       "name": "divider",
       "value": "#333333"
+    },
+    {
+      "name": "bangumi_filter_pill_bg",
+      "value": "#3A2A31"
+    },
+    {
+      "name": "bangumi_filter_pill_text",
+      "value": "#FF8FB3"
+    },
+    {
+      "name": "bangumi_filter_option_text",
+      "value": "#C9CDD3"
     }
   ]
 }

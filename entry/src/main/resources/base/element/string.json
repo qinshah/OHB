@@ -183,6 +183,30 @@
     {
       "name": "home_no_recommend",
       "value": "No recommendations"
+    },
+    {
+      "name": "bangumi_index_title",
+      "value": "Index"
+    },
+    {
+      "name": "bangumi_rank_title",
+      "value": "Ranking"
+    },
+    {
+      "name": "bangumi_filter_more",
+      "value": "More filters"
+    },
+    {
+      "name": "bangumi_filter_less",
+      "value": "Less filters"
+    },
+    {
+      "name": "bangumi_empty",
+      "value": "No content"
+    },
+    {
+      "name": "bangumi_rank_empty",
+      "value": "No ranking data"
     }
   ]
 }

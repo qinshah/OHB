@@ -9,10 +9,18 @@ export class BangumiItem {
   cover: string = '';
   /** 评分（0 表示无评分） */
   score: number = 0;
-  /** 更新至（如 "更新至12话"） */
+  /** 更新状态文案（索引接口 index_show，如 "更新至第191话" / "全12话"） */
   indexShow: string = '';
   /** 分区名 */
   typeName: string = '';
+  /** 角标文案（索引接口 badge：出品 / 独家 / 大会员，空表示无角标） */
+  badge: string = '';
+  /** 角标底色（索引接口 badge_info.bg_color，空则回退品牌色） */
+  badgeColor: string = '';
+  /** 副标题（索引接口 subTitle） */
+  subTitle: string = '';
+  /** 热度文案（索引接口 order，如 "1782.2万追番"） */
+  order: string = '';
 }
 
 /** 剧集 */
@@ -54,14 +62,49 @@ export class BangumiDetail {
   seasons: BangumiItem[] = [];
 }
 
-/** 番剧索引条件项 */
-export class BangumiFilterOption {
-  id: number = 0;
+// ---------- 番剧索引（pgc/season/index，对齐 PiliPlus PgcIndexController） ----------
+
+/** 索引排序项（order 数组元素） */
+export class BangumiOrderItem {
+  /** 排序字段值，直接作为 order 查询参数 */
+  field: string = '';
+  name: string = '';
+  sort: string = '';
+}
+
+/** 索引筛选值（filter[].values[] 元素） */
+export class BangumiConditionValue {
+  /** 选项值，直接作为该分组的查询参数 */
+  keyword: string = '';
   name: string = '';
 }
 
-/** 番剧索引条件分类 */
-export class BangumiFilterGroup {
+/** 索引筛选分组（filter[] 元素，如 地区/风格/类型…） */
+export class BangumiConditionGroup {
+  /** 查询参数字段名（area / style_id / season_version …） */
+  field: string = '';
   name: string = '';
-  options: BangumiFilterOption[] = [];
+  values: BangumiConditionValue[] = [];
 }
+
+/** 索引筛选条件（排序 + 筛选分组） */
+export class BangumiIndexCondition {
+  orders: BangumiOrderItem[] = [];
+  filters: BangumiConditionGroup[] = [];
+}
+
+/** 索引查询结果（列表 + 是否还有下一页） */
+export class BangumiIndexResult {
+  items: BangumiItem[] = [];
+  hasNext: boolean = false;
+}
+
+/** 索引筛选/排序的当前选中项（field → 选中值） */
+export class BangumiSelection {
+  field: string = '';
+  /** 选中的 keyword（排序组为 order 字段值） */
+  value: string = '';
+  /** 选中项显示名，用于左侧胶囊文案 */
+  label: string = '';
+}
+

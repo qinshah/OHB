@@ -613,20 +613,21 @@ export class BiliApi {
     }, ChannelType.Raw);
   }
 
-  /** 番剧索引条件 */
-  pgcIndexCondition(seasonType: number): Promise<Result<Object>> {
-    return this.http.get(ApiConstants.PGC_INDEX_CONDITION, { 'season_type': seasonType }, ChannelType.Raw);
+  /** 番剧索引条件（排序 + 筛选分组） */
+  pgcIndexCondition(seasonType: number, type: number = 0): Promise<Result<Object>> {
+    return this.http.get(ApiConstants.PGC_INDEX_CONDITION, {
+      'season_type': seasonType,
+      'type': type
+    }, ChannelType.Raw);
   }
 
-  /** 番剧索引结果 */
-  pgcIndexResult(seasonType: number, page: number, order: number, typeId: number): Promise<Result<Object>> {
-    return this.http.get(ApiConstants.PGC_INDEX_RESULT, {
-      'season_type': seasonType,
-      'page': page,
-      'page_size': 20,
-      'order': order,
-      'type': typeId
-    }, ChannelType.Raw);
+  /**
+   * 番剧索引结果。
+   * params 由 ViewModel 按当前选中的 order / 各 filter 分组动态组装，
+   * page / pagesize 由仓库统一补全（对齐 PiliPlus PgcHttp.pgcIndexResult）。
+   */
+  pgcIndexResult(params: Record<string, string | number | boolean>): Promise<Result<Object>> {
+    return this.http.get(ApiConstants.PGC_INDEX_RESULT, params, ChannelType.Raw);
   }
 
   /** 追番/取消追番 */

@@ -2,19 +2,41 @@ import { Result } from '../../common/result/Result';
 import { AppError } from '../../common/result/AppError';
 import { BiliApi } from '../../network/BiliApi';
 import { CookieManager } from '../../network/CookieManager';
-import { BangumiDetail, BangumiEpisode, BangumiFilterGroup, BangumiFilterOption, BangumiItem } from '../../models/BangumiModels';
+import {
+  BangumiConditionGroup,
+  BangumiConditionValue,
+  BangumiDetail,
+  BangumiEpisode,
+  BangumiIndexCondition,
+  BangumiIndexResult,
+  BangumiItem,
+  BangumiOrderItem
+} from '../../models/BangumiModels';
 import { PlayUrlInfo } from '../../models/PlayUrlInfo';
 import { VideoCard } from '../../models/VideoCard';
+
+/** 每页条数（3 列网格 × 7 行，对齐 PiliPlus pagesize=21） */
+export const BANGUMI_INDEX_PAGE_SIZE: number = 21;
+
+interface RawBadgeInfo {
+  bg_color?: string;
+  bg_color_night?: string;
+  text?: string;
+}
 
 interface RawBangumiItem {
   season_id?: number;
   media_id?: number;
   title?: string;
   cover?: string;
-  score?: number;
+  score?: string;
   index_show?: string;
   type_name?: string;
-  order?: number;
+  order?: string;
+  subTitle?: string;
+  badge?: string;
+  badge_type?: number;
+  badge_info?: RawBadgeInfo;
 }
 
 interface RawRankData {
@@ -71,19 +93,32 @@ interface RawSeasonData {
   seasons?: RawSeason[];
 }
 
-interface RawFilterOption {
-  id?: number;
+interface RawConditionValue {
+  keyword?: string;
   name?: string;
 }
 
-interface RawFilter {
+interface RawConditionFilter {
+  field?: string;
   name?: string;
-  values?: RawFilterOption[];
+  values?: RawConditionValue[];
+}
+
+interface RawConditionOrder {
+  field?: string;
+  name?: string;
+  sort?: string;
+}
+
+interface RawConditionData {
+  filter?: RawConditionFilter[];
+  order?: RawConditionOrder[];
 }
 
 interface RawIndexData {
   list?: RawBangumiItem[];
   total?: number;
+  has_next?: number;
 }
 
 interface RawDurl {
@@ -153,15 +188,61 @@ export class BangumiRepository {
     return Result.ok<BangumiItem[]>(items);
   }
 
-  async getIndex(seasonType: number, page: number, order: number, typeId: number): Promise<Result<BangumiItem[]>> {
-    const r = await this.api.pgcIndexResult(seasonType, page, order, typeId);
+  /**
+   * 番剧索引条件：排序项 + 筛选分组。
+   * 对齐 PiliPlus PgcIndexController.getPgcIndexCondition（season_type=1、type=0）。
+   */
+  async getIndexCondition(seasonType: number): Promise<Result<BangumiIndexCondition>> {
+    const r = await this.api.pgcIndexCondition(seasonType);
     if (!r.isOk) {
-      return Result.err<BangumiItem[]>(r.error);
+      return Result.err<BangumiIndexCondition>(r.error);
+    }
+    const data = r.value as RawConditionData;
+    const cond = new BangumiIndexCondition();
+    cond.orders = (data.order ?? []).map((raw: RawConditionOrder) => {
+      const o = new BangumiOrderItem();
+      o.field = raw.field ?? '';
+      o.name = raw.name ?? '';
+      o.sort = raw.sort ?? '';
+      return o;
+    }).filter((o: BangumiOrderItem) => o.field.length > 0);
+    cond.filters = (data.filter ?? []).map((raw: RawConditionFilter) => {
+      const g = new BangumiConditionGroup();
+      g.field = raw.field ?? '';
+      g.name = raw.name ?? '';
+      g.values = (raw.values ?? []).map((v: RawConditionValue) => {
+        const cv = new BangumiConditionValue();
+        cv.keyword = v.keyword ?? '';
+        cv.name = v.name ?? '';
+        return cv;
+      });
+      return g;
+    }).filter((g: BangumiConditionGroup) => g.field.length > 0 && g.values.length > 0);
+    return Result.ok<BangumiIndexCondition>(cond);
+  }
+
+  /**
+   * 番剧索引结果：params 为当前选中的 order / 各 filter 分组，
+   * 这里补全分页参数后请求（对齐 PiliPlus PgcHttp.pgcIndexResult）。
+   */
+  async getIndexResult(params: Record<string, string | number | boolean>, page: number): Promise<Result<BangumiIndexResult>> {
+    const query: Record<string, string | number | boolean> = {};
+    const keys = Object.keys(params);
+    for (let i = 0; i < keys.length; i++) {
+      query[keys[i]] = params[keys[i]];
+    }
+    query['page'] = page;
+    query['pagesize'] = BANGUMI_INDEX_PAGE_SIZE;
+    const r = await this.api.pgcIndexResult(query);
+    if (!r.isOk) {
+      return Result.err<BangumiIndexResult>(r.error);
     }
     const data = r.value as RawIndexData;
-    const items = (data.list ?? []).map((raw: RawBangumiItem) => BangumiRepository.parseItem(raw))
+    const res = new BangumiIndexResult();
+    res.items = (data.list ?? []).map((raw: RawBangumiItem) => BangumiRepository.parseItem(raw))
       .filter((b: BangumiItem) => b.seasonId > 0);
-    return Result.ok<BangumiItem[]>(items);
+    res.hasNext = (data.has_next ?? 0) !== 0;
+    return Result.ok<BangumiIndexResult>(res);
   }
 
   async follow(seasonId: number, follow: boolean): Promise<Result<boolean>> {
@@ -201,10 +282,35 @@ export class BangumiRepository {
     item.mediaId = raw.media_id ?? 0;
     item.title = raw.title ?? '';
     item.cover = VideoCard.fixUrl(raw.cover ?? '');
-    item.score = raw.score ?? 0;
+    item.score = BangumiRepository.parseScore(raw.score);
     item.indexShow = raw.index_show ?? '';
     item.typeName = raw.type_name ?? '';
+    item.badge = BangumiRepository.parseBadgeText(raw);
+    item.badgeColor = raw.badge_info?.bg_color ?? '';
+    item.subTitle = raw.subTitle ?? '';
+    item.order = raw.order ?? '';
     return item;
+  }
+
+  /** 角标文案：优先 badge_info.text，回退 badge（接口两者可能一空一有） */
+  private static parseBadgeText(raw: RawBangumiItem): string {
+    const info = raw.badge_info;
+    if (info !== undefined && info !== null) {
+      const text = info.text;
+      if (text !== undefined && text !== null && text.length > 0) {
+        return text;
+      }
+    }
+    return raw.badge ?? '';
+  }
+
+  /** 评分：接口 score 为字符串（"9.7" / ""），空串与非法值统一按 0（无评分）处理 */
+  private static parseScore(raw: string | undefined): number {
+    if (raw === undefined || raw === null || raw.length === 0) {
+      return 0;
+    }
+    const v = Number(raw);
+    return isNaN(v) ? 0 : v;
   }
 
   private static parseSeason(raw: RawSeason): BangumiItem {
