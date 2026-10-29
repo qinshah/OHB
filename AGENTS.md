@@ -123,6 +123,7 @@
 
 * 子模块常用命令：`git submodule update --init`（克隆后初始化）、`git submodule update --remote PiliPlus`（更新到上游最新）。
 
-## 附：忽略目录
+## 附：忽略目录与签名配置
 
-`.trae/`、`.workbuddy/`、`.codegenie/` 为本地工具目录，已加入 `.gitignore`，不要将其中的文件提交或纳入构建。
+* 各 AI 工具的专有目录（`.qoder`、`.trae`、`.workbuddy` 等）都是指向 `.agents` 的软链，由 skill `sync-agent-dirs` 维护。git 只追踪 `.agents` 下 `skills` / `mcp` / `rules` / `commands` 白名单内的内容，白名单块之后的 `.gitignore` 规则不要手改。
+* `build-profile.json5` 已纳入版本管理，仓库里那份的 `signingConfigs` 是空的。本地签名由 DevEco 自动写入，并用 `git update-index --skip-worktree build-profile.json5` 隐藏本地改动——**签名配置里的 `certpath` / `keyPassword` / `storePassword` 一律不得提交**。新克隆的仓库需要先在 DevEco 里配好自动签名，再执行一次上述 `skip-worktree`。
