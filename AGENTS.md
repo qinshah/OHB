@@ -123,6 +123,11 @@
 
 * 子模块常用命令：`git submodule update --init`（克隆后初始化）、`git submodule update --remote PiliPlus`（更新到上游最新）。
 
+## 7. OpenSpec 制品
+
+* `openspec/changes/<name>/tasks.md` 只列 apply 阶段能完成并验证的步骤，**禁止**在其中要求归档（例如「全部完成后运行 `/opsx:archive`」）。归档是 apply 完成之后由用户单独决定的对外动作，写进 tasks 等于替用户预设。
+* 这些任务之外的补充说明（推送、发布等需要用户授权的动作）放在 `## Workflow follow-up` 的普通条目里，不受任务勾选进度约束。
+
 ## 附：忽略目录与签名配置
 
 * 各 AI 工具的专有目录（`.qoder`、`.trae`、`.workbuddy` 等）都是指向 `.agents` 的软链，由 skill `sync-agent-dirs` 维护。git 只追踪 `.agents` 下 `skills` / `mcp` / `rules` / `commands` 白名单内的内容，白名单块之后的 `.gitignore` 规则不要手改。
