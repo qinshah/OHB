@@ -1,14 +1,21 @@
-import { HdsAnimationMode, HdsTabsController } from "@kit.UIDesignKit";
-
 @Observed
 export class IndexViewModel {
   areaWidth: number = 360
   hidden = false
   idx = 0
-  readonly cntlr = new HdsTabsController();
   static readonly instance = new IndexViewModel()
 
+  /**
+   * 底部栏滚动动画注入点：仅 HDS 页加载时挂载（HdsTabsController），
+   * 普通 Tabs 回退页无此能力，保持 undefined 即可。
+   */
+  private tabAnimator: ((show: boolean) => void) | undefined = undefined
+
   private constructor() {
+  }
+
+  setTabAnimator(animator: ((show: boolean) => void) | undefined): void {
+    this.tabAnimator = animator
   }
 
   gridColumns = (): number => {
@@ -22,10 +29,10 @@ export class IndexViewModel {
   }
   onScroll = (offset: number, state: ScrollState) => {
     if (offset < -2 && this.hidden) {
-      this.cntlr.applyShowAnimation(HdsAnimationMode.SCROLL_ANIMATION)
+      this.tabAnimator?.(true)
       this.hidden = false
     } else if (offset > 2 && !this.hidden) {
-      this.cntlr.applyHideAnimation(HdsAnimationMode.SCROLL_ANIMATION)
+      this.tabAnimator?.(false)
       this.hidden = true
     }
   }

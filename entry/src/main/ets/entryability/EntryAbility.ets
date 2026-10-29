@@ -3,6 +3,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { AccountManager } from '../services/account/AccountManager';
 import { DisplayHelper } from '../common/utils/DisplayHelper';
+import { ImmersiveHelper } from '../common/utils/ImmersiveHelper';
 import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
 import { WinUtil } from '../services/appearance/WinUtils';
 import { ContextUtil } from '../common/utils/ContextUtil';
@@ -31,7 +32,10 @@ export default class EntryAbility extends UIAbility {
     // 缓存主窗口实例给 DisplayHelper（路由感知全屏/方向管理）
     DisplayHelper.init(this.context);
 
-    windowStage.loadContent('pages/Index', (err) => {
+    // HDS 组件为 HMS 能力，部分 OpenHarmony 发行版（开鸿等）未实现，
+    // 此时绝不能加载静态引用 @kit.UIDesignKit 的页面
+    const page = ImmersiveHelper.isHdsSupported ? 'pages/HdsIndex' : 'pages/Index';
+    windowStage.loadContent(page, (err) => {
       if (err.code) {
         hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
         return;

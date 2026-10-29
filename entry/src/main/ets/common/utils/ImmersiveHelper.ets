@@ -1,23 +1,24 @@
 import { deviceInfo } from '@kit.BasicServicesKit';
-import { Logger } from './Logger';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+/** HDS 组件沉浸光感 syscap（HDS Core since API 20，沉浸材质 since API 23） */
+const HDS_SYSCAP = 'SystemCapability.UIDesign.HDSComponent.Core';
 
 /**
- * 沉浸光感辅助工具
+ * 沉浸光感能力探测
  *
- * HDS 组件沉浸光感材质能力 since 6.1.0(23)：
- * - HdsTabs 通过 barFloatingStyle.systemMaterialEffect 设置沉浸光感
- * - hdsMaterial.MaterialType.ADAPTIVE + MaterialLevel.ADAPTIVE 系统自适应
- * - 系统根据设备算力动态调整材质效果，实现性能与显示效果的最佳平衡
+ * 注意：不能用 sdkApiVersion 单独判断。第三方 OpenHarmony 发行版（如开鸿）
+ * 会上报 API 23，但系统并未实现 HDS（@hms:hds.* 缺导出），静态 import
+ * @kit.UIDesignKit 会直接抛 SyntaxError 导致启动闪退。
+ * 因此以 syscap 为准，并且只有真正加载 HDS 页时才会引用该 kit。
  *
  * 参考：https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/ui-design-hds-component-material
- *
- * 兼容回退：API < 23 时 isHdsSupported 返回 false，UI 使用普通 Navigation + Tabs 回退。
  */
 export class ImmersiveHelper {
   private static pSupported: boolean = false;
   private static pChecked: boolean = false;
 
-  /** HDS 沉浸光感是否受支持（API 23+，HarmonyOS 6.1.0+） */
+  /** HDS 沉浸光感是否受支持（设备声明 HDS syscap 且 API 23+） */
   static get isHdsSupported(): boolean {
     if (!ImmersiveHelper.pChecked) {
       ImmersiveHelper.checkSupport();
@@ -25,19 +26,23 @@ export class ImmersiveHelper {
     return ImmersiveHelper.pSupported;
   }
 
-  /** 检测设备 HDS 沉浸光感支持情况 */
   static checkSupport(): boolean {
     if (ImmersiveHelper.pChecked) {
       return ImmersiveHelper.pSupported;
     }
+    let supported = false;
+    let apiVersion = 0;
     try {
-      // HDS 组件沉浸光感材质能力 since 6.1.0(23)
-      ImmersiveHelper.pSupported = deviceInfo.sdkApiVersion >= 23;
+      apiVersion = deviceInfo.sdkApiVersion;
+      supported = canIUse(HDS_SYSCAP) && apiVersion >= 23;
     } catch (e) {
-      ImmersiveHelper.pSupported = false;
+      supported = false;
     }
+    ImmersiveHelper.pSupported = supported;
     ImmersiveHelper.pChecked = true;
-    Logger.info('Immersive', `HDS supported=${ImmersiveHelper.pSupported}, sdkApi=${deviceInfo.sdkApiVersion}`);
-    return ImmersiveHelper.pSupported;
+    hilog.info(0x0000, TAG, 'HDS supported=%{public}s, sdkApi=%{public}d', String(supported), apiVersion);
+    return supported;
   }
 }
+
+const TAG = ImmersiveHelper.name;

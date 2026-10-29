@@ -327,6 +327,18 @@
     {
       "name": "quality_unavailable_toast",
       "value": "%s is unavailable, switched to %s"
+    },
+    {
+      "name": "main_tab_home",
+      "value": "Home"
+    },
+    {
+      "name": "main_tab_dynamic",
+      "value": "Dynamic"
+    },
+    {
+      "name": "main_tab_mine",
+      "value": "Me"
     }
   ]
 }

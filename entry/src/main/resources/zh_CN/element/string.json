@@ -327,6 +327,18 @@
     {
       "name": "quality_unavailable_toast",
       "value": "当前账号或该视频不支持%s，已切换为%s"
+    },
+    {
+      "name": "main_tab_home",
+      "value": "首页"
+    },
+    {
+      "name": "main_tab_dynamic",
+      "value": "动态"
+    },
+    {
+      "name": "main_tab_mine",
+      "value": "我的"
     }
   ]
 }
