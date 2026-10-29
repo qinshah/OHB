@@ -1,3 +1,6 @@
 [submodule "PiliPlus"]
 	path = PiliPlus
 	url = https://github.com/dev4harmony/PiliPlus.git
+[submodule ".agents/skills/sync-agent-dirs"]
+	path = .agents/skills/sync-agent-dirs
+	url = https://github.com/qinshah/sync-agent-dirs.git

@@ -17,3 +17,34 @@ build-profile.json5
 /.cache
 /.workbuddy
 entry/patch.json
+
+# >>> sync-agent-dirs >>>
+# 只追踪下列白名单目录，其余一律忽略；别用 .??* 之类的通配，会把 .git 也吃掉
+.agents/*
+!.agents/skills/
+!.agents/skills/**
+!.agents/mcp/
+!.agents/mcp/**
+!.agents/rules/
+!.agents/rules/**
+!.agents/commands/
+!.agents/commands/**
+.agents-backup/
+
+.claude
+.cursor
+.codex
+.qoder
+.gemini
+.windsurf
+.cline
+.roo
+.kilocode
+.trae
+.continue
+.amp
+.opencode
+.aider-desk
+.kiro
+.zed
+# <<< sync-agent-dirs <<<
