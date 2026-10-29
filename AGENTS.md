@@ -128,6 +128,20 @@
 * `openspec/changes/<name>/tasks.md` 只列 apply 阶段能完成并验证的步骤，**禁止**在其中要求归档（例如「全部完成后运行 `/opsx:archive`」）。归档是 apply 完成之后由用户单独决定的对外动作，写进 tasks 等于替用户预设。
 * 这些任务之外的补充说明（推送、发布等需要用户授权的动作）放在 `## Workflow follow-up` 的普通条目里，不受任务勾选进度约束。
 
+## 8. 构建与设备工具
+
+* 未另行指定时，编译、安装、启动、抓日志、抓 UI/截图统一用 `devecocli`（`build` / `run` / `ui` / `log` / `device`），不要直接调 `hvigorw`。可直接运行 `devecocli` 命令探索，或参考 skill `deveco-cli`。
+* 只有 `devecocli` 没有对应能力时才回落到 `hdc`，例如 `hidumper` 读 WindowRect、`aa start --ps` 传调试启动参数。
+
+## 9. 夜间静音
+
+* 01:00–08:00 期间执行会外放声音的自动化流程（例如进入视频播放页截图），必须先静音目标测试设备：把 MUSIC 音量按到 0（`hdc shell "uitest uiInput keyEvent 16"`），再用 `hidumper -s AudioPolicyService -a '-v'` 核对 `MUSIC: 0`。
+* 需要调大音量的自动化流程在该时段直接跳过，不要执行。
+
+## 10. 工作流收尾
+
+* 每完成一次 OpenSpec change 工作流后，回顾是否需要总结或更新 skill（自动化脚本用法、设备验证套路等），并把结论告知用户。
+
 ## 附：忽略目录与签名配置
 
 * 各 AI 工具的专有目录（`.qoder`、`.trae`、`.workbuddy` 等）都是指向 `.agents` 的软链，由 skill `sync-agent-dirs` 维护。git 只追踪 `.agents` 下 `skills` / `mcp` / `rules` / `commands` 白名单内的内容，白名单块之后的 `.gitignore` 规则不要手改。
