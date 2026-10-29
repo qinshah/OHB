@@ -2,6 +2,7 @@ import { DataState, DataStatus } from '../common/state/DataState';
 import { VideoCard } from '../models/VideoCard';
 import { VideoRepository } from '../data/repository/VideoRepository';
 import { common } from '@kit.AbilityKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 /**
  * 首页 ViewModel（Task 6）：推荐流加载/刷新/分页，DataState 状态机管理。
@@ -24,6 +25,7 @@ export class HomeViewModel {
   }
 
   async loadFirst(): Promise<void> {
+    hilog.info(0x0000, TAG, 'feed loadFirst mode=%{public}s', this.mode);
     this.feedState = DataState.loading<VideoCard[]>();
     this.freshIdx = 1;
     this.popularPage = 1;
@@ -74,3 +76,5 @@ export class HomeViewModel {
     return this.feedState.status === DataStatus.Refreshing;
   }
 }
+
+const TAG = HomeViewModel.name;

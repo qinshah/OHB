@@ -339,6 +339,14 @@
     {
       "name": "main_tab_mine",
       "value": "Me"
+    },
+    {
+      "name": "video_comments_title",
+      "value": "Comments"
+    },
+    {
+      "name": "video_related_title",
+      "value": "Related"
     }
   ]
 }

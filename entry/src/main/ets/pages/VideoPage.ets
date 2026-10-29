@@ -12,9 +12,17 @@ import { CommentViewModel } from '../viewmodel/CommentViewModel';
 import { VideoCard } from '../models/VideoCard';
 import { VideoCardView } from '../common/components/VideoCardView';
 import { common } from '@kit.AbilityKit';
+import { LengthMetrics } from '@kit.ArkUI';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { UserSpaceParam } from './RouteParams';
 import { VideoNodeController } from '../player/VideoNodeController';
 import { VideoListTile } from '../common/components/VideoListTile';
+import { KEY_WIN_WIDTH_VP, WindowLayout } from '../common/window/WindowLayout';
+
+/** 测试用节点 id（不随语言变化） */
+const VIDEO_PLAYER_ID = 'video_player';
+const VIDEO_RELATED_ID = 'video_related';
+const VIDEO_COMMENTS_ID = 'video_comments';
 
 /**
  * 视频详情页（TabView 布局）
@@ -28,6 +36,7 @@ export default struct VideoDetailPage {
   /** 番剧季号（>0 表示番剧分集：由 Route.video 传入，用于加载整季选集） */
   @Prop seasonId: number = 0;
   @State vm: VideoDetailVM = new VideoDetailVM();
+  @StorageProp(KEY_WIN_WIDTH_VP) @Watch('onWinWidthChange') winWidthVp: number = WindowLayout.DEFAULT_WIDTH_VP;
   @State descExpanded: boolean = false;
   @State commentLoaded: boolean = false;
   @State currentTab: number = 0;
@@ -68,8 +77,37 @@ export default struct VideoDetailPage {
         if (this.seasonId > 0) {
           this.vm.loadPgcEpisodes(this.seasonId);
         }
+        // 宽屏形态下评论常驻右栏，详情就绪即加载
+        if (this.wide()) {
+          this.loadComment();
+        }
       });
     }
+  }
+
+  /** 是否宽屏（左右分栏形态） */
+  private wide(): boolean {
+    return WindowLayout.isWide(this.winWidthVp);
+  }
+
+  /** 窗口宽度变化：切入宽屏时补加载评论（已加载则不重复请求） */
+  private onWinWidthChange(): void {
+    if (this.wide()) {
+      this.loadComment();
+    }
+  }
+
+  /** 左栏推荐网格列数（左栏约占窗口宽度 2/3） */
+  private relatedColumns(): number {
+    return Math.min(3, WindowLayout.gridColumns(this.winWidthVp * 2 / 3));
+  }
+
+  /** 左栏推荐项宽度（vp）：额外预留 padding 余量，避免取整后放不下导致换行少一列 */
+  private relatedItemWidth(): number {
+    const columns = this.relatedColumns();
+    const paneWidth = this.winWidthVp * 2 / 3;
+    const usable = paneWidth - 32 - (columns - 1) * 8;
+    return Math.max(160, Math.floor(usable / columns));
   }
 
   /** 取本页的节点控制器（保证非空；闭包内使用规避可空类型限制） */
@@ -92,7 +130,8 @@ export default struct VideoDetailPage {
 
   build() {
     NavDestination() {
-      Column() {
+      Flex({ direction: this.wide() ? FlexDirection.Row : FlexDirection.Column }) {
+        Column() {
         // ===== 播放区 =====
         Stack() {
           // 渲染节点容器：与全屏页共享同一节点，全屏切换时节点迁移、Surface 不销毁。
@@ -160,7 +199,12 @@ export default struct VideoDetailPage {
         // - 视频画面本身由内核 videoScaleType=FIT（contain）在 16:9 容器内等比缩放留黑边
         .aspectRatio(16 / 9)
         .backgroundColor(Color.Black)
+        .id(VIDEO_PLAYER_ID)
 
+        if (this.wide()) {
+          // 宽屏：播放器下方为多列推荐（详情头部并排在推荐流前）
+          this.WideRelatedPane()
+        } else {
         // ===== Tabs：推荐 / 评论 =====
         Tabs({ barPosition: BarPosition.Start, index: this.currentTab }) {
           TabContent() {
@@ -184,12 +228,118 @@ export default struct VideoDetailPage {
           }
         })
         .layoutWeight(1)
+        }
+        }
+        .layoutWeight(this.wide() ? 2 : 1)
+        .height('100%')
+
+        if (this.wide()) {
+          Column() {
+            this.CommentPane()
+          }
+          .layoutWeight(1)
+          .height('100%')
+          .padding({ left: 8 })
+        }
       }
       .width('100%')
       .height('100%')
       .backgroundColor(AppColors.PAGE_BG)
     }
     .hideTitleBar(true)
+  }
+
+  /**
+   * 宽屏右栏：评论区（独立滚动）
+   */
+  @Builder
+  CommentPane() {
+    Column() {
+      // 详情信息限高可滚，避免长简介/选集把评论区挤到屏幕外
+      Scroll() {
+        Column() {
+          if (this.vm.detailState.status === DataStatus.Loading) {
+            LoadingView()
+              .height(120)
+          } else if (this.vm.detailState.status === DataStatus.Error) {
+            ErrorView({
+              message: this.vm.detailState.error?.message ?? '详情加载失败',
+              retryable: true,
+              onRetry: () => {
+                this.vm.load(this.bvid);
+              }
+            })
+              .height(120)
+          } else if (this.vm.detail !== null) {
+            this.DetailHeader()
+          }
+        }
+        .width('100%')
+        .padding({ left: 8, right: 8, top: 8 })
+      }
+      .scrollBar(BarState.Off)
+      .width('100%')
+      .constraintSize({ maxHeight: '45%' })
+
+      Column() {
+        this.CommentTab()
+      }
+      .layoutWeight(1)
+      .width('100%')
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(AppColors.PAGE_BG)
+    .id(VIDEO_COMMENTS_ID)
+  }
+
+  /**
+   * 宽屏左栏下区：多列推荐（独立滚动）
+   */
+  @Builder
+  WideRelatedPane() {
+    Scroll() {
+      Column({ space: 10 }) {
+        Text($r('app.string.video_related_title'))
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppColors.TEXT_PRIMARY)
+          .width('100%')
+
+        if (this.vm.relatedState.status === DataStatus.Loading) {
+          Row() {
+            LoadingProgress()
+              .width(28)
+              .height(28)
+              .color(AppColors.BRAND)
+          }
+          .width('100%')
+          .justifyContent(FlexAlign.Center)
+          .padding(16)
+        } else if (this.vm.relatedState.status === DataStatus.Data) {
+          Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
+            ForEach(this.vm.related, (item: VideoCard) => {
+              VideoListTile({
+                card: item,
+                onCardClick: (bvid: string) => {
+                  Route.push(Route.video, bvid);
+                }
+              })
+                .width(this.relatedItemWidth())
+                .height(96)
+            }, (item: VideoCard) => item.bvid)
+          }
+          .width('100%')
+        }
+      }
+      .width('100%')
+      .padding({ left: 8, right: 8 })
+      .alignItems(HorizontalAlign.Start)
+    }
+    .scrollBar(BarState.Off)
+    .width('100%')
+    .layoutWeight(1)
+    .id(VIDEO_RELATED_ID)
   }
 
   @Builder
@@ -512,6 +662,8 @@ export default struct VideoDetailPage {
     if (this.commentLoaded || this.vm.detail === null) {
       return;
     }
+    hilog.info(0x0000, TAG, 'comment loadOnce aid=%{public}d widthVp=%{public}s',
+      this.vm.detail.aid, `${this.winWidthVp.toFixed(1)}`);
     this.commentLoaded = true;
     this.commentVm.init(1, this.vm.detail.aid);
   }
@@ -526,3 +678,4 @@ interface VideoPageItem {
   /** 番剧分集：该集独立 bvid（普通分P为空串） */
   bvid: string;
 }
+const TAG = VideoDetailPage.name;

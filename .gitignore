@@ -20,3 +20,9 @@ entry/patch.json
 .trae
 .workbuddy
 # <<< sync-agent-dirs <<<
+
+# 尺寸矩阵采集产物
+out/
+
+# devecocli / ohpm 本地缓存
+.cache/

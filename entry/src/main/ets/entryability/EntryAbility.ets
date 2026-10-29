@@ -6,7 +6,9 @@ import { DisplayHelper } from '../common/utils/DisplayHelper';
 import { ImmersiveHelper } from '../common/utils/ImmersiveHelper';
 import { SystemAudioHelper } from '../common/utils/SystemAudioHelper';
 import { WinUtil } from '../services/appearance/WinUtils';
+import { WindowTestHook } from '../services/appearance/WindowTestHook';
 import { ContextUtil } from '../common/utils/ContextUtil';
+import BuildProfile from 'BuildProfile';
 
 const DOMAIN = 0x0000;
 
@@ -34,19 +36,38 @@ export default class EntryAbility extends UIAbility {
 
     // HDS 组件为 HMS 能力，部分 OpenHarmony 发行版（开鸿等）未实现，
     // 此时绝不能加载静态引用 @kit.UIDesignKit 的页面
-    const page = ImmersiveHelper.isHdsSupported ? 'pages/HdsIndex' : 'pages/Index';
+    const page = EntryAbility.pickShell(this.launchWant);
+    hilog.info(DOMAIN, 'EntryAbility', 'shell=%{public}s hds=%{public}s',
+      page, `${ImmersiveHelper.isHdsSupported}`);
     windowStage.loadContent(page, (err) => {
       if (err.code) {
         hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
         return;
       }
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
-      WinUtil.init(windowStage)
+      // 内容加载后才可取 UIContext：在此开始监听窗口尺寸/安全区
+      WinUtil.init(windowStage);
+      // 调试构建：按启动参数把窗口调整到目标尺寸（发布构建忽略）
+      WindowTestHook.apply(this.launchWant, windowStage);
     });
   }
 
-  onWindowStageDestroy(): void {
-    // Main window is destroyed, release UI related resources
+  /**
+   * 选择入口壳：默认按 HDS syscap 判定；调试构建可用 `--ps ohbShell index|hds` 强制，
+   * 以便在同一台设备上对两套壳跑同一份尺寸矩阵。
+   */
+  private static pickShell(want: Want): string {
+    const forced = BuildProfile.DEBUG ? String(want.parameters?.['ohbShell'] ?? '') : '';
+    if (forced === 'index') {
+      return 'pages/Index';
+    }
+    if (forced === 'hds') {
+      return 'pages/HdsIndex';
+    }
+    return ImmersiveHelper.isHdsSupported ? 'pages/HdsIndex' : 'pages/Index';
+  }
+
+  onWindowStageDestroy(): void {    // Main window is destroyed, release UI related resources
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageDestroy');
   }
 

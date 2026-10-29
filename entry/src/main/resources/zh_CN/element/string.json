@@ -339,6 +339,14 @@
     {
       "name": "main_tab_mine",
       "value": "我的"
+    },
+    {
+      "name": "video_comments_title",
+      "value": "评论"
+    },
+    {
+      "name": "video_related_title",
+      "value": "相关推荐"
     }
   ]
 }

@@ -1,8 +1,9 @@
 // [API 23+] 应用窗口全屏与方向管理工具
-import { window, display } from '@kit.ArkUI';
+import { window } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
-import { Logger } from './Logger';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Route } from '../../framework/Route';
+import { WindowLayout } from '../window/WindowLayout';
 
 /**
  * DisplayHelper
@@ -12,11 +13,10 @@ import { Route } from '../../framework/Route';
  * DisplayHelper 根据目标页面决定是否启用应用窗口全屏和方向锁定。
  *
  * 设计原则：
- * - 视频全屏页（VIDEO_FULLSCREEN）按视频宽高比决定方向（宽高比 > 1.2 视为横向视频）
- *   由 VideoFullscreenPage 加载视频后主动调用 applyFullscreenForVideo(aspect)
- * - 折叠屏适配（参考官方横竖屏最佳实践）：展开/半展开态大屏保持竖屏全屏，
- *   仅折叠态/非折叠设备按视频宽高比旋转
- * - 其它页面（VIDEO_DETAIL / LOGIN / SEARCH_RESULT / Tab 根页）一律退出全屏并恢复竖屏
+ * - 布局与方向只由窗口尺寸决定，不按设备类型或折叠态分支
+ * - 视频全屏页（VIDEO_FULLSCREEN）按视频宽高比决定是否锁横屏（> 1.2 视为横向视频），
+ *   其余情况不锁方向，由 VideoFullscreenPage 加载视频后主动调用 applyFullscreenForVideo(aspect)
+ * - 其它页面（VIDEO_DETAIL / LOGIN / SEARCH_RESULT / Tab 根页）一律退出全屏并恢复不锁定方向
  * - 非页面级路由变化（isPage=false）不做处理
  *
  * 注意：本工具只管应用窗口（Window）层面；XComponent 的尺寸/aspectRatio 由页面层维护。
@@ -25,6 +25,11 @@ export class DisplayHelper {
   private static win: window.Window | null = null;
   private static _fullscreen: boolean = false;
   private static pLandscape: boolean = false;
+  /** 本次全屏是否由视频页发起（退出时需还原浮窗尺寸） */
+  private static videoFullscreen: boolean = false;
+  /** 最近一次向系统请求的方向锁定（'landscape' / 'none'）；
+   *  与 isLandscape 区分：后者反映系统是否真的接受了旋转 */
+  private static pLockRequest: string = 'none';
   /** 是否已显式调用过 enter/exit，避免初始页面误触发恢复 */
   private static pInitialized: boolean = false;
 
@@ -34,7 +39,7 @@ export class DisplayHelper {
       DisplayHelper.win = await window.getLastWindow(ctx);
       DisplayHelper.pInitialized = true;
     } catch (e) {
-      Logger.error('Display', `init fail: ${JSON.stringify(e)}`);
+      hilog.error(0, TAG, 'init fail: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -44,6 +49,11 @@ export class DisplayHelper {
 
   static get isLandscape(): boolean {
     return DisplayHelper.pLandscape;
+  }
+
+  /** 应用请求的方向锁定决策（PC 等不支持旋转的设备上系统可能拒绝，但决策仍可断言） */
+  static get lockRequest(): string {
+    return DisplayHelper.pLockRequest;
   }
 
   /**
@@ -67,43 +77,23 @@ export class DisplayHelper {
 
   /**
    * 视频全屏页加载视频后调用：
-   * - 折叠屏展开/半展开态：大屏保持竖屏全屏（参考官方横竖屏最佳实践）
    * - 宽高比 > 1.2 视为横向视频 → 应用窗口全屏 + 横向锁定
-   * - 否则视为竖屏视频 → 仅应用窗口全屏，保持竖屏
+   * - 否则仅应用窗口全屏，不锁方向（窗口尺寸继续作为布局依据）
    */
   static async applyFullscreenForVideo(aspectRatio: number): Promise<void> {
     try {
+      // 记录本次全屏由视频页发起：退出时需要把窗口还原成进入前的浮窗尺寸
+      DisplayHelper.videoFullscreen = true;
       await DisplayHelper.enterAppFullscreen();
-      if (DisplayHelper.isExpandedOrHalfFolded()) {
-        // 折叠屏展开态：大屏竖屏全屏即可，不旋转
-        await DisplayHelper.setPortrait();
-      } else if (aspectRatio > 1.2) {
+      const landscape: boolean = WindowLayout.isLandscapeVideo(aspectRatio);
+      DisplayHelper.pLockRequest = landscape ? 'landscape' : 'none';
+      hilog.info(0, TAG, 'fullscreen aspect=%{public}s lockLandscape=%{public}s',
+        aspectRatio.toFixed(3), `${landscape}`);
+      if (landscape) {
         await DisplayHelper.setLandscape();
-      } else {
-        await DisplayHelper.setPortrait();
       }
     } catch (e) {
-      Logger.error('Display', `applyFullscreenForVideo fail: ${JSON.stringify(e)}`);
-    }
-  }
-
-  /**
-   * 是否处于折叠屏展开/半展开态（参考官方 WindowUtils 实现）。
-   * 必须先经 isFoldable() 判断是折叠屏设备——部分非折叠设备
-   * getFoldStatus() 也会返回 EXPANDED，直接判断会误入"大屏保持竖屏"分支，
-   * 导致全屏永不横屏（本次修复的回归点）。
-   */
-  private static isExpandedOrHalfFolded(): boolean {
-    try {
-      if (!display.isFoldable()) {
-        return false; // 非折叠屏设备：一律按视频宽高比决定方向
-      }
-      const fold = display.getFoldStatus();
-      return fold === display.FoldStatus.FOLD_STATUS_EXPANDED ||
-        fold === display.FoldStatus.FOLD_STATUS_HALF_FOLDED;
-    } catch (e) {
-      Logger.error('Display', `getFoldStatus fail: ${JSON.stringify(e)}`);
-      return false;
+      hilog.error(0, TAG, 'applyFullscreenForVideo fail: %{public}s', JSON.stringify(e));
     }
   }
 
@@ -112,26 +102,50 @@ export class DisplayHelper {
     if (DisplayHelper.win === null) {
       return;
     }
+    const win = DisplayHelper.win;
     try {
-      await DisplayHelper.win.setWindowLayoutFullScreen(true);
-      await DisplayHelper.win.setWindowSystemBarEnable([]);
+      await win.setWindowLayoutFullScreen(true);
     } catch (e) {
-      Logger.error('Display', `enterAppFullscreen fail: ${JSON.stringify(e)}`);
+      hilog.error(0, TAG, 'enterAppFullscreen layout fail: %{public}s', JSON.stringify(e));
+    }
+    try {
+      await win.setWindowSystemBarEnable([]);
+    } catch (e) {
+      hilog.error(0, TAG, 'enterAppFullscreen hideBars fail: %{public}s', JSON.stringify(e));
     }
   }
 
-  /** 退出应用窗口全屏：恢复系统栏 + 恢复竖屏方向 */
+  /**
+   * 退出应用窗口全屏：恢复系统栏 + 解除方向锁定；视频发起的全屏额外还原浮窗尺寸。
+   * 每个系统调用独立容错——PC 上部分调用会被拒（如 setPreferredOrientation），
+   * 若串在一个 try 里会连带跳过后面的复位与 recover，把窗口卡在全屏态。
+   */
   static async exitAppFullscreen(): Promise<void> {
     if (DisplayHelper.win === null) {
       return;
     }
+    const win = DisplayHelper.win;
+    const wasVideoFullscreen = DisplayHelper.videoFullscreen;
+    DisplayHelper.videoFullscreen = false;
+    DisplayHelper.pLandscape = false;
+    DisplayHelper.pLockRequest = 'none';
     try {
-      await DisplayHelper.win.setPreferredOrientation(window.Orientation.UNSPECIFIED);
-      // await DisplayHelper.win.setWindowLayoutFullScreen(false);
-      await DisplayHelper.win.setWindowSystemBarEnable(['status', 'navigation']);
-      DisplayHelper.pLandscape = false;
+      await win.setPreferredOrientation(window.Orientation.UNSPECIFIED);
     } catch (e) {
-      Logger.error('Display', `exitAppFullscreen fail: ${JSON.stringify(e)}`);
+      hilog.error(0, TAG, 'exitAppFullscreen unlock fail: %{public}s', JSON.stringify(e));
+    }
+    try {
+      await win.setWindowSystemBarEnable(['status', 'navigation']);
+    } catch (e) {
+      hilog.error(0, TAG, 'exitAppFullscreen restore bars fail: %{public}s', JSON.stringify(e));
+    }
+    if (wasVideoFullscreen) {
+      // PC / 平板上进入全屏会把窗口切成最大化，不 recover 会把用户原来的窗口尺寸丢掉
+      try {
+        await win.recover();
+      } catch (e) {
+        hilog.error(0, TAG, 'exitAppFullscreen recover fail: %{public}s', JSON.stringify(e));
+      }
     }
   }
 
@@ -144,20 +158,9 @@ export class DisplayHelper {
       await DisplayHelper.win.setPreferredOrientation(window.Orientation.AUTO_ROTATION_LANDSCAPE);
       DisplayHelper.pLandscape = true;
     } catch (e) {
-      Logger.error('Display', `setLandscape fail: ${JSON.stringify(e)}`);
-    }
-  }
-
-  /** 锁定竖屏 */
-  static async setPortrait(): Promise<void> {
-    if (DisplayHelper.win === null) {
-      return;
-    }
-    try {
-      await DisplayHelper.win.setPreferredOrientation(window.Orientation.PORTRAIT);
-      DisplayHelper.pLandscape = false;
-    } catch (e) {
-      Logger.error('Display', `setPortrait fail: ${JSON.stringify(e)}`);
+      hilog.error(0, TAG, 'setLandscape fail: %{public}s', JSON.stringify(e));
     }
   }
 }
+
+const TAG = DisplayHelper.name;

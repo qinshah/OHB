@@ -117,9 +117,6 @@ export struct HdsIndex {
           this.vm.idx = idx;
         })
       }
-      .onAreaChange((_old: Area, area: Area) => {
-        this.vm.areaWidth = Number(area.width) / 1;
-      })
       .padding({ top: this.topRectHeight })
       .hideTitleBar(true)
       .navDestination(this.routeBuilder)

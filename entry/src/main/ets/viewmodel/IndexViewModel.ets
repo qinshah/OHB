@@ -1,6 +1,5 @@
 @Observed
 export class IndexViewModel {
-  areaWidth: number = 360
   hidden = false
   idx = 0
   static readonly instance = new IndexViewModel()
@@ -18,15 +17,6 @@ export class IndexViewModel {
     this.tabAnimator = animator
   }
 
-  gridColumns = (): number => {
-    if (this.areaWidth >= 840) {
-      return 4;
-    }
-    if (this.areaWidth >= 600) {
-      return 3;
-    }
-    return 2;
-  }
   onScroll = (offset: number, state: ScrollState) => {
     if (offset < -2 && this.hidden) {
       this.tabAnimator?.(true)

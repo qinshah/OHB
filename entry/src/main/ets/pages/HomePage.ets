@@ -6,6 +6,7 @@ import { VideoCardView } from '../common/components/VideoCardView';
 import { EmptyView, ErrorView, LoadingView } from '../common/components/StateViews';
 import { AppColors } from '../theme/AppTheme';
 import { IndexViewModel } from '../viewmodel/IndexViewModel';
+import { KEY_WIN_WIDTH_VP, WindowLayout } from '../common/window/WindowLayout';
 import { LiveTabContent } from './LivePage';
 import { BangumiIndexContent } from './BangumiPage';
 import { MusicTabContent } from './MusicPage';
@@ -15,6 +16,10 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 const SEARCH_BAR_HEIGHT = 44;
 /** 滚动触发阈值（vp）：超过视为有效上滑/回拉 */
 const SCROLL_EPSILON = 2;
+/** 测试用节点 id（不随语言变化） */
+const HOME_FEED_ID = 'home_feed';
+const HOME_SIDE_RAIL_ID = 'home_side_rail';
+const HOME_PARTITION_BAR_ID = 'home_partition_bar';
 
 /**
  * 推荐/热门 feed 内容（每个 tab 独立实例：独立 VM、独立列表与滚动位置）
@@ -26,7 +31,7 @@ struct FeedTab {
   /** 滚动回调（转发给宿主页面，驱动搜索排收起/底部栏显隐） */
   onScrollAction?: (offset: number, state: ScrollState) => void;
   @State vm: HomeViewModel = new HomeViewModel();
-  @Consume(IndexViewModel.name) indexVm: IndexViewModel;
+  @StorageProp(KEY_WIN_WIDTH_VP) winWidthVp: number = WindowLayout.DEFAULT_WIDTH_VP;
   @State refreshing: boolean = false;
 
   aboutToAppear(): void {
@@ -59,29 +64,36 @@ struct FeedTab {
           .layoutWeight(1)
       } else {
         Refresh({ refreshing: $$this.refreshing }) {
-          List({ space: 8, spaceWidth: 8 }) {
-            ForEach(this.vm.items, (item: VideoCard, index: number) => {
-              ListItem() {
-                VideoCardView({
-                  card: item,
-                  onCardClick: (bvid: string) => {
-                    Route.push(Route.video, bvid);
-                  }
-                })
-              }
-            }, (item: VideoCard, index: number) => `${item.bvid}_${index}`)
+          // 内容区居中：窗口再宽单卡也不会超过 CARD_MAX_WIDTH
+          Column() {
+            List({ space: 8, spaceWidth: 8 }) {
+              ForEach(this.vm.items, (item: VideoCard, index: number) => {
+                ListItem() {
+                  VideoCardView({
+                    card: item,
+                    onCardClick: (bvid: string) => {
+                      Route.push(Route.video, bvid);
+                    }
+                  })
+                }
+              }, (item: VideoCard, index: number) => `${item.bvid}_${index}`)
+            }
+            .scrollBar(BarState.Off)
+            .onDidScroll((offset: number, state: ScrollState) => {
+              this.onScrollAction?.(offset, state);
+            })
+            .lanes(WindowLayout.gridColumns(this.winWidthVp))
+            .width('100%')
+            .height('100%')
+            .constraintSize({ maxWidth: WindowLayout.gridMaxWidth(WindowLayout.gridColumns(this.winWidthVp)) })
+            .padding({ left: 8, right: 8 })
+            .id(HOME_FEED_ID)
+            .onReachEnd(() => {
+              this.vm.loadMore();
+            })
           }
-          .scrollBar(BarState.Off)
-          .onDidScroll((offset: number, state: ScrollState) => {
-            this.onScrollAction?.(offset, state);
-          })
-          .lanes(this.indexVm.gridColumns())
           .width('100%')
           .height('100%')
-          .padding({ left: 8, right: 8 })
-          .onReachEnd(() => {
-            this.vm.loadMore();
-          })
         }
         .onRefreshing(() => {
           this.refreshing = true;
@@ -115,12 +127,19 @@ interface HomeTabItem {
 @Component
 export struct HomePage {
   @Consume(IndexViewModel.name) indexVm: IndexViewModel;
+  @StorageProp(KEY_WIN_WIDTH_VP) winWidthVp: number = WindowLayout.DEFAULT_WIDTH_VP;
   /** 搜索排是否展开（下滑收起、上滑恢复） */
   @State searchBarExpanded: boolean = true;
   /** 当前选中 tab 下标（默认推荐） */
   @State currentTab: number = 1;
   /** 各 tab 是否已加载（懒加载：首次切到才构建内容） */
   @State loadedTabs: boolean[] = [false, true, false, false, false];
+  private tabsCtrl: TabsController = new TabsController();
+
+  /** 是否宽屏（侧边导航形态） */
+  private wide(): boolean {
+    return WindowLayout.isWide(this.winWidthVp);
+  }
 
   /** 分区 tabs 定义（直播跳转放首位，对齐 B 站原版顺序） */
   private tabs(): HomeTabItem[] {
@@ -156,6 +175,7 @@ export struct HomePage {
   private switchTab(index: number): void {
     this.currentTab = index;
     this.markLoaded(index);
+    this.tabsCtrl.changeIndex(index);
     hilog.info(0x0000, TAG, 'switch home tab to %{public}d', index);
   }
 
@@ -170,7 +190,37 @@ export struct HomePage {
 
   build() {
     NavDestination() {
-      Column() {
+      Flex({ direction: FlexDirection.Row }) {
+        // 宽屏侧边导航：窄屏宽度 0 且不参与绘制，但始终保留在组件树中，
+        // 避免跨越 840vp 时 Tabs 子树被重建
+        Column({ space: 4 }) {
+          ForEach(this.tabs(), (tab: HomeTabItem, index: number) => {
+            Row({ space: 6 }) {
+              Text('')
+                .width(3)
+                .height(16)
+                .borderRadius(2)
+                .backgroundColor(this.currentTab === index ? AppColors.BRAND : Color.Transparent)
+              Text(tab.label)
+                .fontSize(14)
+                .fontWeight(this.currentTab === index ? FontWeight.Bold : FontWeight.Normal)
+                .fontColor(this.currentTab === index ? AppColors.TEXT_PRIMARY : AppColors.TEXT_SECONDARY)
+                .maxLines(1)
+            }
+            .width('100%')
+            .padding({ left: 8, right: 8, top: 12, bottom: 12 })
+            .borderRadius(10)
+            .onClick(() => {
+              this.switchTab(index);
+            })
+          }, (tab: HomeTabItem) => `rail_${tab.key}`)
+        }
+        .width(this.wide() ? WindowLayout.RAIL_WIDTH : 0)
+        .height('100%')
+        .padding({ top: 8 })
+        .visibility(this.wide() ? Visibility.Visible : Visibility.None)
+        .id(HOME_SIDE_RAIL_ID)
+        Column() {
         Blank().height(5)
         // 搜索排：下滑收起（高度/透明度动画），上滑恢复
         Row() {
@@ -214,9 +264,11 @@ export struct HomePage {
         .scrollable(ScrollDirection.Horizontal)
         .scrollBar(BarState.Off)
         .width('100%')
+        .visibility(this.wide() ? Visibility.None : Visibility.Visible)
+        .id(HOME_PARTITION_BAR_ID)
 
         // 分区内容：Tabs 支持左右滑动切换（自带 tabBar 隐藏，用上方自定义 tab 栏）
-        Tabs({ index: this.currentTab }) {
+        Tabs({ barPosition: BarPosition.Start, index: this.currentTab, controller: this.tabsCtrl }) {
           // 直播
           TabContent() {
             if (this.loadedTabs[0]) {
@@ -278,6 +330,9 @@ export struct HomePage {
           this.currentTab = index;
           this.markLoaded(index);
         })
+        }
+        .layoutWeight(1)
+        .height('100%')
       }
       .width('100%')
       .height('100%')

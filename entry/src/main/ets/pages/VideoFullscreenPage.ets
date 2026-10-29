@@ -6,8 +6,7 @@ import { Route } from '../framework/Route';
 import { PlayerControlView } from '../components/PlayerControlView';
 import { DanmakuLayer } from '../components/DanmakuLayer';
 import { VideoNodeController } from '../player/VideoNodeController';
-import { display } from '@kit.ArkUI';
-import { Logger } from '../common/utils/Logger';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 /**
  * 视频全屏页（独立路由，节点迁移方案）
@@ -19,12 +18,12 @@ import { Logger } from '../common/utils/Logger';
  * - 渲染节点迁移：与详情页共享同一个 XComponent 节点（VideoNodeController），
  *   Surface 在全屏切换全程不销毁，播放器无需换绑/重建，播放零中断
  * - 加载后按视频宽高比调用 DisplayHelper：
- *     aspect > 1.2 → 应用窗口全屏 + 横向（折叠屏展开态除外）
- *     aspect <= 1.2 → 仅应用窗口全屏，保持竖屏
+ *     aspect > 1.2 → 应用窗口全屏 + 横向锁定
+ *     aspect <= 1.2 → 仅应用窗口全屏，不锁方向（画面按窗口尺寸 contain）
  * - 生命周期职责：
  *     aboutToAppear   → markFullscreen(true)，维护 Player 全屏状态标记
  *     aboutToDisappear → markFullscreen(false) + restoreToHost 归还节点给详情页
- * - 折叠屏适配：监听 foldStatusChange，设备折叠时自动退出全屏回详情页
+ * - 不按折叠态/设备类型分支：折叠与否都只体现为窗口尺寸变化，页面随尺寸自适应
  *
  * 注意：本页不释放 Player（释放由 VideoDetailPage 经 PlayerRepository.remove 负责）
  */
@@ -36,14 +35,11 @@ export struct VideoFullscreenPage {
   private playerVM: Player | null = null;
   /** 视频渲染节点控制器：与详情页共享同一节点（Surface 不销毁，播放零中断） */
   private nodeController: VideoNodeController | null = null;
-  /** 折叠屏状态监听回调（aboutToDisappear 时反注册） */
-  private foldCallback: Callback<display.FoldStatus> | null = null;
-
   aboutToAppear(): void {
     // @Prop 此时必定已同步：按 playerId 获取共享实例与节点控制器
     this.playerVM = PlayerRepository.get(this.playerId) ?? PlayerRepository.create(this.playerId);
     this.nodeController = VideoNodeController.get(this.playerId);
-    Logger.info('Fullscreen', `aboutToAppear playerId=${this.playerId}, playerVM.id=${this.playerVM.id}`);
+    hilog.info(0, TAG, 'aboutToAppear playerId=%{public}s id=%{public}s', this.playerId, this.playerVM.id);
     this.playerVM.attachUIContext(this.getUIContext());
     // 维护 Player 全屏状态标记（修复：此前该状态从未被设置）
     this.playerVM.markFullscreen(true);
@@ -51,10 +47,9 @@ export struct VideoFullscreenPage {
     // 若 aspectRatio 已就绪（>0），回调会立即同步触发
     this.playerVM.setAspectRatioReady((aspect: number) => {
       DisplayHelper.applyFullscreenForVideo(aspect).catch((e: Object) => {
-        Logger.error('Fullscreen', `applyFullscreenForVideo fail: ${JSON.stringify(e)}`);
+        hilog.error(0, TAG, 'applyFullscreenForVideo fail: %{public}s', JSON.stringify(e));
       });
     });
-    this.watchFoldStatus();
   }
 
   aboutToDisappear(): void {
@@ -67,34 +62,6 @@ export struct VideoFullscreenPage {
     // 把节点抢回，随后随页面销毁被连带销毁 → 详情页黑屏。
     // 正确时序：全屏页容器销毁时框架自动触发 rebuild，详情页容器此时才
     // makeNode 拿回节点（官方 LandscapePlay 退出时同样不碰 nodeController）。
-    // 反注册折叠屏监听
-    if (this.foldCallback !== null) {
-      try {
-        display.off('foldStatusChange', this.foldCallback);
-      } catch (e) {
-        Logger.error('Fullscreen', `off foldStatusChange fail: ${JSON.stringify(e)}`);
-      }
-      this.foldCallback = null;
-    }
-  }
-
-  /**
-   * 折叠屏适配（参考官方横竖屏最佳实践）：
-   * - 展开/半展开 → 折叠：折叠态外屏较窄，自动退出全屏回详情页继续播放
-   * - 折叠 → 展开：DisplayHelper 在 applyFullscreenForVideo 中会按折叠状态重算方向
-   */
-  private watchFoldStatus(): void {
-    try {
-      this.foldCallback = (status: display.FoldStatus): void => {
-        if (status === display.FoldStatus.FOLD_STATUS_FOLDED &&
-          this.playerVM !== null && this.playerVM.fullscreen) {
-          Route.pop();
-        }
-      };
-      display.on('foldStatusChange', this.foldCallback);
-    } catch (e) {
-      Logger.error('Fullscreen', `watchFoldStatus fail: ${JSON.stringify(e)}`);
-    }
   }
 
   build() {
@@ -148,3 +115,5 @@ export struct VideoFullscreenPage {
     })
   }
 }
+
+const TAG = VideoFullscreenPage.name;

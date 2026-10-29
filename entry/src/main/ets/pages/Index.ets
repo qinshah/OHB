@@ -74,6 +74,8 @@ struct Index {
     .hideTitleBar(true)
     .navDestination(this.routeBuilder)
     .mode(NavigationMode.Stack)
+    // 底部安全区（桌面 Dock / 导航条）以内边距避让，不依赖设备类型
+    .padding({ bottom: this.bottomRectHeight })
   }
 
   @Builder
