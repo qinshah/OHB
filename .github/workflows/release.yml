@@ -37,13 +37,8 @@ jobs:
           version: 26.0.0.621
           cache: true
 
-      # build-profile.json5 被 .gitignore 忽略，CI 中从 example 生成
-      - name: Prepare build profile
-        run: |
-          if [ ! -f build-profile.json5 ]; then
-            cp build-profile.json5.example build-profile.json5
-          fi
-          cat build-profile.json5
+      - name: Show build profile
+        run: cat build-profile.json5
 
       - name: Install ohpm dependencies
         run: ohpm install --all
